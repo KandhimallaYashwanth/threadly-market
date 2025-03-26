@@ -1,0 +1,97 @@
+
+export enum UserRole {
+  CUSTOMER = 'customer',
+  WEAVER = 'weaver',
+  ADMIN = 'admin'
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  avatar?: string;
+  bio?: string;
+  isVerified?: boolean;
+  createdAt: Date;
+}
+
+export enum FabricType {
+  COTTON = 'cotton',
+  SILK = 'silk',
+  LINEN = 'linen',
+  WOOL = 'wool',
+  JUTE = 'jute',
+  MIXED = 'mixed'
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  description: string;
+  images: string[];
+  price: number;
+  discount?: number;
+  fabricType: FabricType;
+  weaverId: string;
+  weaver?: User;
+  inStock: boolean;
+  rating?: number;
+  reviewCount?: number;
+  tags: string[];
+  createdAt: Date;
+}
+
+export enum OrderStatus {
+  PENDING = 'pending',
+  PROCESSING = 'processing',
+  WEAVING = 'weaving',
+  SHIPPED = 'shipped',
+  DELIVERED = 'delivered',
+  CANCELLED = 'cancelled'
+}
+
+export interface OrderItem {
+  productId: string;
+  product?: Product;
+  quantity: number;
+  price: number;
+}
+
+export interface Order {
+  id: string;
+  customerId: string;
+  customer?: User;
+  items: OrderItem[];
+  status: OrderStatus;
+  total: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Review {
+  id: string;
+  productId: string;
+  customerId: string;
+  customer?: User;
+  rating: number;
+  comment?: string;
+  createdAt: Date;
+}
+
+export interface Message {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  content: string;
+  attachments?: string[];
+  isRead: boolean;
+  createdAt: Date;
+}
+
+export interface Conversation {
+  id: string;
+  participants: string[];
+  lastMessage?: Message;
+  updatedAt: Date;
+}
