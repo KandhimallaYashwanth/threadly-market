@@ -1,6 +1,9 @@
 
 import { FabricType, OrderStatus, Product, User, UserRole } from './types';
 
+// Re-export the types so they can be imported from data.ts as well
+export { FabricType, OrderStatus, UserRole };
+
 // Mock Weavers
 export const weavers: User[] = [
   {

@@ -16,7 +16,8 @@ import {
   DropdownMenuRadioItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import { FabricType, productsWithWeavers } from '@/lib/data';
+import { productsWithWeavers } from '@/lib/data';
+import { FabricType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const Products = () => {
