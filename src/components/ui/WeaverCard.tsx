@@ -11,15 +11,17 @@ interface WeaverCardProps {
   productCount?: number;
   averageRating?: number;
   className?: string;
+  style?: React.CSSProperties;
 }
 
-const WeaverCard = ({ weaver, productCount = 0, averageRating = 0, className }: WeaverCardProps) => {
+const WeaverCard = ({ weaver, productCount = 0, averageRating = 0, className, style }: WeaverCardProps) => {
   return (
     <div 
       className={cn(
         "glass rounded-xl p-6 flex flex-col hover-lift transition-all-300",
         className
       )}
+      style={style}
     >
       <div className="flex items-start space-x-4">
         <div className="relative">
