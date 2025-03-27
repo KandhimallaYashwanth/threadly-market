@@ -7,6 +7,11 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "@/pages/Index";
 import Products from "@/pages/Products";
 import ProductDetail from "@/pages/ProductDetail";
+import Weavers from "@/pages/Weavers";
+import WeaverDetail from "@/pages/WeaverDetail";
+import About from "@/pages/About";
+import Contact from "@/pages/Contact";
+import Chat from "@/pages/Chat";
 import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
 import NotFound from "@/pages/NotFound";
@@ -23,6 +28,11 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/products" element={<Products />} />
           <Route path="/products/:id" element={<ProductDetail />} />
+          <Route path="/weavers" element={<Weavers />} />
+          <Route path="/weavers/:id" element={<WeaverDetail />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/chat/:id" element={<Chat />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="*" element={<NotFound />} />
