@@ -9,15 +9,17 @@ import { cn } from '@/lib/utils';
 interface ProductCardProps {
   product: Product;
   className?: string;
+  style?: React.CSSProperties;
 }
 
-const ProductCard = ({ product, className }: ProductCardProps) => {
+const ProductCard = ({ product, className, style }: ProductCardProps) => {
   return (
     <div 
       className={cn(
         "rounded-lg overflow-hidden bg-white h-full flex flex-col hover-lift transition-all-300",
         className
       )}
+      style={style}
     >
       <Link to={`/products/${product.id}`} className="block overflow-hidden h-64 relative">
         <img 
