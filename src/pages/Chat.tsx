@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { requireAuth, getCurrentUser } from '@/lib/auth';
 
 // Defining message interfaces
 interface Message {
@@ -61,8 +62,8 @@ const Chat = () => {
   // Find the weaver by ID
   const weaver = weavers.find(w => w.id === id);
   
-  // Mock user for demo
-  const currentUser = {
+  // Get current user
+  const currentUser = getCurrentUser() || {
     id: 'c1',
     name: 'You',
     avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=1376&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
@@ -88,6 +89,11 @@ const Chat = () => {
   });
   const [linkInput, setLinkInput] = useState('');
   const [showLinkDialog, setShowLinkDialog] = useState(false);
+  
+  // Check authentication when component mounts
+  useEffect(() => {
+    requireAuth(navigate);
+  }, [navigate]);
   
   // Handle if weaver not found
   if (!weaver) {
@@ -243,6 +249,8 @@ const Chat = () => {
       budget: '',
       timeline: ''
     });
+    
+    toast.success("Custom order request sent!");
   };
   
   // Parse content for rendering (handle links)

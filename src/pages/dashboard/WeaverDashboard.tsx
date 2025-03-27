@@ -27,7 +27,8 @@ import {
   Upload,
   Image,
   FileText,
-  Save
+  Save,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
@@ -64,10 +65,8 @@ import { OrderStatus, FabricType, UserRole } from '@/lib/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
-// Colors for the pie chart
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A569BD', '#5DADE2'];
 
-// Mock conversations data
 const mockConversations = [
   {
     id: 'conv-001',
@@ -104,23 +103,18 @@ const WeaverDashboard = () => {
     images: [] as string[]
   });
   
-  // For demo purposes, we'll use the first weaver from the data
   const currentWeaver = weavers[0];
   
-  // Get products for this weaver
   const weaverProducts = productsWithWeavers.filter(
     p => p.weaverId === currentWeaver.id
   );
   
-  // Check authentication
   useEffect(() => {
-    // Check if user is logged in
     const storedUser = localStorage.getItem('user');
     
     if (storedUser) {
       const parsedUser = JSON.parse(storedUser);
       
-      // Verify user role
       if (parsedUser.role !== UserRole.WEAVER) {
         toast.error("Unauthorized access", {
           description: "This dashboard is for weavers only."
@@ -130,7 +124,6 @@ const WeaverDashboard = () => {
         setUser(parsedUser);
       }
     } else {
-      // Redirect to login if not logged in
       toast.error("Authentication required", {
         description: "Please log in to access your dashboard."
       });
@@ -140,7 +133,6 @@ const WeaverDashboard = () => {
     setLoading(false);
   }, [navigate]);
   
-  // Render the status color for order statuses
   const getStatusColor = (status: OrderStatus) => {
     switch (status) {
       case OrderStatus.PENDING:
@@ -160,7 +152,6 @@ const WeaverDashboard = () => {
     }
   };
 
-  // Format date for display
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('en-US', {
       year: 'numeric',
@@ -169,22 +160,18 @@ const WeaverDashboard = () => {
     }).format(date);
   };
 
-  // Handle product submission
   const handleProductSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate form fields
     if (!newProduct.name || !newProduct.description || !newProduct.price || !newProduct.images.length) {
       toast.error("Please fill all required fields");
       return;
     }
     
-    // Simulate product creation
     toast.success("Product created successfully", {
       description: "Your item has been posted and is now available for purchase."
     });
     
-    // Reset form
     setNewProduct({
       name: '',
       description: '',
@@ -194,19 +181,15 @@ const WeaverDashboard = () => {
       images: []
     });
     
-    // Switch to products tab to show the "new" product
     setActiveTab('products');
   };
   
-  // Handle image upload
   const handleImageUpload = () => {
-    // Simulate image upload with placeholder images
     const placeholderImages = [
       'https://images.unsplash.com/photo-1561849954-d28ad922814b?auto=format&fit=crop&q=80&w=2340&ixlib=rb-4.0.3',
       'https://images.unsplash.com/photo-1617383543739-0524e8926dca?auto=format&fit=crop&q=80&w=2264&ixlib=rb-4.0.3'
     ];
     
-    // Randomly select one of the placeholder images
     const randomImage = placeholderImages[Math.floor(Math.random() * placeholderImages.length)];
     
     setNewProduct({
@@ -217,14 +200,12 @@ const WeaverDashboard = () => {
     toast.success("Image uploaded successfully");
   };
   
-  // Handle logout
   const handleLogout = () => {
     localStorage.removeItem('user');
     toast.success("Logged out successfully");
     navigate('/');
   };
 
-  // If loading or no user, show loading state
   if (loading || !user) {
     return (
       <>
@@ -241,7 +222,6 @@ const WeaverDashboard = () => {
     );
   }
 
-  // Calculate total orders and revenue
   const totalOrders = orderStatusData.reduce((sum, item) => sum + item.count, 0);
   const totalRevenue = monthlySalesData.reduce((sum, item) => sum + item.sales, 0);
 
@@ -251,7 +231,6 @@ const WeaverDashboard = () => {
       
       <div className="flex-1 pt-16">
         <div className="flex">
-          {/* Sidebar */}
           <aside 
             className={cn(
               "bg-primary text-primary-foreground h-[calc(100vh-64px)] sticky top-16 transition-all",
@@ -306,9 +285,7 @@ const WeaverDashboard = () => {
             </div>
           </aside>
 
-          {/* Main Content */}
           <div className="flex-1 p-6">
-            {/* Header */}
             <div className="flex justify-between items-center mb-8">
               <div>
                 <h1 className="text-2xl font-medium">Weaver Dashboard</h1>
@@ -367,12 +344,9 @@ const WeaverDashboard = () => {
               </div>
             </div>
             
-            {/* Dashboard Content */}
             <div>
-              {/* Overview Tab */}
               {activeTab === 'overview' && (
                 <div className="space-y-6">
-                  {/* Overview Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                     {[
                       { 
@@ -421,7 +395,6 @@ const WeaverDashboard = () => {
                     ))}
                   </div>
                   
-                  {/* Charts Section */}
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                     <Card className="lg:col-span-2">
                       <CardHeader>
@@ -494,15 +467,11 @@ const WeaverDashboard = () => {
                     </Card>
                   </div>
                   
-                  {/* Recent Activity */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Recent Orders */}
                     <Card>
-                      <CardHeader className="flex flex-row items-center justify-between">
-                        <div>
-                          <CardTitle>Recent Orders</CardTitle>
-                          <CardDescription>Latest customer orders</CardDescription>
-                        </div>
+                      <CardHeader>
+                        <CardTitle>Recent Orders</CardTitle>
+                        <CardDescription>Latest customer orders</CardDescription>
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-4">
@@ -530,13 +499,10 @@ const WeaverDashboard = () => {
                       </CardContent>
                     </Card>
                     
-                    {/* Recent Messages */}
                     <Card>
-                      <CardHeader className="flex flex-row items-center justify-between">
-                        <div>
-                          <CardTitle>Recent Messages</CardTitle>
-                          <CardDescription>Customer communications</CardDescription>
-                        </div>
+                      <CardHeader>
+                        <CardTitle>Recent Messages</CardTitle>
+                        <CardDescription>Customer communications</CardDescription>
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-4">
@@ -581,7 +547,6 @@ const WeaverDashboard = () => {
                 </div>
               )}
               
-              {/* Products Tab */}
               {activeTab === 'products' && (
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between">
@@ -635,7 +600,6 @@ const WeaverDashboard = () => {
                 </Card>
               )}
               
-              {/* Add Product Tab */}
               {activeTab === 'add-product' && (
                 <Card>
                   <CardHeader>
@@ -745,7 +709,6 @@ const WeaverDashboard = () => {
                           </div>
                         </div>
                         
-                        {/* Preview of uploaded images */}
                         {newProduct.images.length > 0 && (
                           <div className="grid grid-cols-3 gap-4 mt-4">
                             {newProduct.images.map((image, index) => (
@@ -778,7 +741,6 @@ const WeaverDashboard = () => {
                 </Card>
               )}
               
-              {/* Messages Tab */}
               {activeTab === 'messages' && (
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -831,8 +793,6 @@ const WeaverDashboard = () => {
                   </CardContent>
                 </Card>
               )}
-              
-              {/* Other tabs can be implemented as needed */}
             </div>
           </div>
         </div>
