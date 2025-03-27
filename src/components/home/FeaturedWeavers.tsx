@@ -38,7 +38,7 @@ const FeaturedWeavers = () => {
           <Button 
             asChild 
             variant="link" 
-            className="mt-4 md:mt-0 group no-underline"
+            className="mt-4 md:mt-0 group no-underline text-primary"
           >
             <Link to="/weavers">
               View All Weavers

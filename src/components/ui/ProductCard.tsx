@@ -1,10 +1,11 @@
 
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Star, ShoppingCart } from 'lucide-react';
 import { Product } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 interface ProductCardProps {
   product: Product;
@@ -13,6 +14,49 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ product, className, style }: ProductCardProps) => {
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  
+  const addToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!product.inStock) {
+      toast({
+        title: "Product unavailable",
+        description: "Sorry, this product is currently out of stock.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Get existing cart from localStorage
+    const existingCart = JSON.parse(localStorage.getItem('cart') || '[]');
+    
+    // Check if product is already in cart
+    const isInCart = existingCart.some((item: any) => item.id === product.id);
+    
+    if (isInCart) {
+      toast({
+        title: "Already in cart",
+        description: `${product.name} is already in your cart.`,
+      });
+      return;
+    }
+    
+    // Add product to cart with quantity 1
+    const newCart = [...existingCart, { ...product, quantity: 1 }];
+    localStorage.setItem('cart', JSON.stringify(newCart));
+    
+    // Dispatch storage event for navbar to detect cart changes
+    window.dispatchEvent(new Event('cartUpdated'));
+    
+    toast({
+      title: "Added to cart",
+      description: `${product.name} has been added to your cart.`,
+    });
+  };
+
   return (
     <div 
       className={cn(
@@ -77,6 +121,7 @@ const ProductCard = ({ product, className, style }: ProductCardProps) => {
             variant="outline" 
             className="ml-2 rounded-full w-10 h-10 p-0"
             disabled={!product.inStock}
+            onClick={addToCart}
           >
             <ShoppingCart className="w-4 h-4" />
             <span className="sr-only">Add to cart</span>

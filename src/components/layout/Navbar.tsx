@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Menu, X, Search, ShoppingCart, User, Bell, LogIn 
 } from 'lucide-react';
@@ -8,12 +8,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useToast } from '@/hooks/use-toast';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { toast } = useToast();
+  const [cartCount, setCartCount] = useState(0);
 
   // Check if we're on the homepage
   const isHomePage = location.pathname === '/';
@@ -29,6 +33,25 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Check for cart items in localStorage
+  useEffect(() => {
+    const getCartItems = () => {
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      setCartCount(cart.length);
+    };
+
+    getCartItems();
+    window.addEventListener('storage', getCartItems);
+    
+    // Custom event for cart updates
+    window.addEventListener('cartUpdated', getCartItems);
+    
+    return () => {
+      window.removeEventListener('storage', getCartItems);
+      window.removeEventListener('cartUpdated', getCartItems);
+    };
+  }, []);
+
   const navLinks = [
     { name: 'Home', href: '/' },
     { name: 'Products', href: '/products' },
@@ -38,6 +61,22 @@ const Navbar = () => {
   ];
 
   const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen);
+  
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const searchInput = form.querySelector('input') as HTMLInputElement;
+    
+    if (searchInput.value.trim()) {
+      navigate(`/products?search=${encodeURIComponent(searchInput.value.trim())}`);
+      searchInput.value = '';
+      if (mobileMenuOpen) setMobileMenuOpen(false);
+    }
+  };
+  
+  const handleCartClick = () => {
+    navigate('/cart');
+  };
 
   return (
     <nav
@@ -79,11 +118,13 @@ const Navbar = () => {
 
           {/* Search */}
           <div className="hidden md:block relative flex-1 max-w-md mx-6">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <Input 
-              placeholder="Search products, weavers..." 
-              className="w-full pl-10 bg-background/80 border-none" 
-            />
+            <form onSubmit={handleSearch}>
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Input 
+                placeholder="Search products, weavers..." 
+                className="w-full pl-10 bg-background/80 border-none" 
+              />
+            </form>
           </div>
 
           {/* Action Buttons */}
@@ -92,10 +133,15 @@ const Navbar = () => {
               <Bell className="w-5 h-5" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full"></span>
             </Button>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="relative" onClick={handleCartClick}>
               <ShoppingCart className="w-5 h-5" />
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center bg-primary text-white text-xs font-bold rounded-full">
+                  {cartCount}
+                </span>
+              )}
             </Button>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
               <User className="w-5 h-5" />
             </Button>
             <Button asChild size="sm" className="ml-2">
@@ -135,19 +181,34 @@ const Navbar = () => {
               ))}
             </div>
             <div className="py-4 border-t border-border">
-              <div className="relative mb-4">
+              <form onSubmit={handleSearch} className="relative mb-4">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input 
                   placeholder="Search products, weavers..." 
                   className="w-full pl-10" 
                 />
-              </div>
+              </form>
               <div className="flex space-x-3">
-                <Button variant="outline" size="sm" className="flex-1">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    navigate('/cart');
+                  }}
+                >
                   <ShoppingCart className="w-4 h-4 mr-2" />
-                  Cart
+                  Cart {cartCount > 0 && `(${cartCount})`}
                 </Button>
-                <Button size="sm" className="flex-1">
+                <Button 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    navigate('/auth');
+                  }}
+                >
                   <LogIn className="w-4 h-4 mr-2" />
                   Sign In
                 </Button>

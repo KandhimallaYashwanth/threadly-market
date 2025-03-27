@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { LogIn, BadgeCheck, User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,25 +13,74 @@ import { cn } from '@/lib/utils';
 
 const Auth = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [accountType, setAccountType] = useState<UserRole>(UserRole.CUSTOMER);
+  const [isLoading, setIsLoading] = useState(false);
   
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulating a successful login
-    toast({
-      title: "Login successful",
-      description: "Welcome back to Threadly!",
-    });
+    setIsLoading(true);
+    
+    // Get form data
+    const form = e.target as HTMLFormElement;
+    const email = (form.querySelector('#email') as HTMLInputElement).value;
+    const password = (form.querySelector('#password') as HTMLInputElement).value;
+    
+    // Simulating authentication - in a real app, this would be an API call
+    setTimeout(() => {
+      // Store user info in localStorage (this is just for demo purposes)
+      // In a real app, you would use proper authentication with tokens
+      localStorage.setItem('user', JSON.stringify({
+        email,
+        name: email.split('@')[0],
+        role: UserRole.CUSTOMER,
+        isLoggedIn: true
+      }));
+      
+      setIsLoading(false);
+      
+      // Show success message
+      toast({
+        title: "Login successful",
+        description: "Welcome back to Threadly!",
+      });
+      
+      // Redirect to dashboard
+      navigate('/dashboard');
+    }, 1500);
   };
   
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulating a successful registration
-    toast({
-      title: "Registration successful",
-      description: "Your account has been created. Welcome to Threadly!",
-    });
+    setIsLoading(true);
+    
+    // Get form data
+    const form = e.target as HTMLFormElement;
+    const name = (form.querySelector('#reg-name') as HTMLInputElement).value;
+    const email = (form.querySelector('#reg-email') as HTMLInputElement).value;
+    
+    // Simulating registration - in a real app, this would be an API call
+    setTimeout(() => {
+      // Store user info in localStorage (this is just for demo purposes)
+      localStorage.setItem('user', JSON.stringify({
+        email,
+        name,
+        role: accountType,
+        isLoggedIn: true
+      }));
+      
+      setIsLoading(false);
+      
+      // Show success message
+      toast({
+        title: "Registration successful",
+        description: "Your account has been created. Welcome to Threadly!",
+      });
+      
+      // Redirect to dashboard
+      navigate('/dashboard');
+    }, 1500);
   };
 
   return (
@@ -106,8 +155,8 @@ const Auth = () => {
                       </div>
                     </div>
                     
-                    <Button type="submit" className="w-full">
-                      Sign In
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? "Signing in..." : "Sign In"}
                     </Button>
                   </div>
                   
@@ -243,8 +292,8 @@ const Auth = () => {
                       </label>
                     </div>
                     
-                    <Button type="submit" className="w-full">
-                      Create Account
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? "Creating Account..." : "Create Account"}
                     </Button>
                   </div>
                   
