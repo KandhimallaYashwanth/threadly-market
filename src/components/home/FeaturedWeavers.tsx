@@ -40,9 +40,9 @@ const FeaturedWeavers = () => {
             variant="link" 
             className="mt-4 md:mt-0 group no-underline text-primary"
           >
-            <Link to="/weavers">
-              View All Weavers
-              <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+            <Link to="/weavers" className="flex items-center">
+              <span>View All Weavers</span>
+              <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
             </Link>
           </Button>
         </div>
@@ -61,17 +61,17 @@ const FeaturedWeavers = () => {
         </div>
         
         {/* Artisan story section */}
-        <div className="mt-20 bg-white rounded-xl overflow-hidden">
+        <div className="mt-20 bg-white rounded-xl overflow-hidden shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-2">
             <div className="p-8 md:p-12 flex flex-col justify-center">
               <h3 className="text-2xl font-medium mb-4">The Craft & Heritage</h3>
               <p className="text-muted-foreground mb-6">
                 Each thread tells a story of tradition passed down through generations. Our platform preserves these ancient techniques while providing sustainable livelihoods to artisan communities across the country.
               </p>
-              <Button asChild className="w-fit">
-                <Link to="/about">
+              <Button asChild className="w-fit group">
+                <Link to="/about" className="flex items-center">
                   Our Story
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                 </Link>
               </Button>
             </div>

@@ -1,22 +1,35 @@
 
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { LogIn, BadgeCheck, User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { UserRole } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const Auth = () => {
-  const { toast } = useToast();
+  const { toast: shadowToast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
   const [accountType, setAccountType] = useState<UserRole>(UserRole.CUSTOMER);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Check if user was redirected from another page
+  const from = location.state?.from || '/';
+  const redirectReason = location.state?.reason || '';
+
+  useEffect(() => {
+    // Display message if redirected for a specific reason
+    if (redirectReason === 'auth-required') {
+      toast.info('Please log in to continue');
+    }
+  }, [redirectReason]);
   
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,25 +42,33 @@ const Auth = () => {
     
     // Simulating authentication - in a real app, this would be an API call
     setTimeout(() => {
-      // Store user info in localStorage (this is just for demo purposes)
-      // In a real app, you would use proper authentication with tokens
+      // For demo, assume all logins are successful
+      // Set user role based on email pattern for demo purposes
+      const isWeaver = email.includes('weaver') || email.includes('artisan');
+      const userRole = isWeaver ? UserRole.WEAVER : UserRole.CUSTOMER;
+      
+      // Store user info in localStorage
       localStorage.setItem('user', JSON.stringify({
         email,
         name: email.split('@')[0],
-        role: UserRole.CUSTOMER,
+        role: userRole,
         isLoggedIn: true
       }));
       
       setIsLoading(false);
       
       // Show success message
-      toast({
-        title: "Login successful",
-        description: "Welcome back to Threadly!",
+      toast.success("Login successful", {
+        description: "Welcome back to Threadly!"
       });
       
-      // Redirect to dashboard
-      navigate('/dashboard');
+      // Redirect based on role
+      if (userRole === UserRole.WEAVER) {
+        navigate('/dashboard/weaver');
+      } else {
+        // If redirected from a specific page, go back there
+        navigate(from === '/auth' ? '/dashboard/customer' : from);
+      }
     }, 1500);
   };
   
@@ -60,9 +81,9 @@ const Auth = () => {
     const name = (form.querySelector('#reg-name') as HTMLInputElement).value;
     const email = (form.querySelector('#reg-email') as HTMLInputElement).value;
     
-    // Simulating registration - in a real app, this would be an API call
+    // Simulating registration
     setTimeout(() => {
-      // Store user info in localStorage (this is just for demo purposes)
+      // Store user info in localStorage
       localStorage.setItem('user', JSON.stringify({
         email,
         name,
@@ -73,13 +94,17 @@ const Auth = () => {
       setIsLoading(false);
       
       // Show success message
-      toast({
-        title: "Registration successful",
-        description: "Your account has been created. Welcome to Threadly!",
+      toast.success("Registration successful", {
+        description: "Your account has been created. Welcome to Threadly!"
       });
       
-      // Redirect to dashboard
-      navigate('/dashboard');
+      // Redirect based on role
+      if (accountType === UserRole.WEAVER) {
+        navigate('/dashboard/weaver');
+      } else {
+        // If redirected from a specific page, go back there
+        navigate(from === '/auth' ? '/dashboard/customer' : from);
+      }
     }, 1500);
   };
 
