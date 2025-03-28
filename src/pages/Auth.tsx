@@ -1,293 +1,316 @@
 
-import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { LogIn, BadgeCheck, User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { UserRole } from '@/lib/types';
-import { toast } from 'sonner';
-import { redirectBasedOnRole } from '@/lib/auth';
-
-// Login form schema
-const loginSchema = z.object({
-  email: z.string().email({ message: 'Please enter a valid email address' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
-});
-
-// Register form schema
-const registerSchema = z.object({
-  name: z.string().min(2, { message: 'Name must be at least 2 characters' }),
-  email: z.string().email({ message: 'Please enter a valid email address' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
-  confirmPassword: z.string(),
-  role: z.enum([UserRole.CUSTOMER, UserRole.WEAVER]),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
-
-type LoginFormValues = z.infer<typeof loginSchema>;
-type RegisterFormValues = z.infer<typeof registerSchema>;
+import { cn } from '@/lib/utils';
 
 const Auth = () => {
+  const { toast } = useToast();
   const navigate = useNavigate();
-  const location = useLocation();
-  const [activeTab, setActiveTab] = useState('login');
-
-  const fromPath = location.state?.from || '/';
+  const [showPassword, setShowPassword] = useState(false);
+  const [accountType, setAccountType] = useState<UserRole>(UserRole.CUSTOMER);
+  const [isLoading, setIsLoading] = useState(false);
   
-  // Login form
-  const loginForm = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-    },
-  });
-
-  // Register form
-  const registerForm = useForm<RegisterFormValues>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: {
-      name: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      role: UserRole.CUSTOMER,
-    },
-  });
-
-  // Check if user is already logged in
-  useEffect(() => {
-    const user = localStorage.getItem('user');
-    if (user) {
-      redirectBasedOnRole(navigate);
-    }
-  }, [navigate]);
-
-  // Handle login submission
-  const onLoginSubmit = (values: LoginFormValues) => {
-    // Mock login for demo
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    // Get form data
+    const form = e.target as HTMLFormElement;
+    const email = (form.querySelector('#email') as HTMLInputElement).value;
+    const password = (form.querySelector('#password') as HTMLInputElement).value;
+    
+    // Simulating authentication - in a real app, this would be an API call
     setTimeout(() => {
-      // In a real app, this would be an API call
-      const mockUser = {
-        id: 'u1',
-        name: 'Demo User',
-        email: values.email,
+      // Store user info in localStorage (this is just for demo purposes)
+      // In a real app, you would use proper authentication with tokens
+      localStorage.setItem('user', JSON.stringify({
+        email,
+        name: email.split('@')[0],
         role: UserRole.CUSTOMER,
-        createdAt: new Date(),
-        isVerified: true
-      };
+        isLoggedIn: true
+      }));
       
-      localStorage.setItem('user', JSON.stringify(mockUser));
+      setIsLoading(false);
       
-      toast.success('Logged in successfully!');
+      // Show success message
+      toast({
+        title: "Login successful",
+        description: "Welcome back to Threadly!",
+      });
       
-      // Redirect based on user role
-      redirectBasedOnRole(navigate);
-    }, 1000);
+      // Redirect to dashboard
+      navigate('/dashboard');
+    }, 1500);
   };
-
-  // Handle register submission
-  const onRegisterSubmit = (values: RegisterFormValues) => {
-    // Mock registration for demo
+  
+  const handleRegister = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    // Get form data
+    const form = e.target as HTMLFormElement;
+    const name = (form.querySelector('#reg-name') as HTMLInputElement).value;
+    const email = (form.querySelector('#reg-email') as HTMLInputElement).value;
+    
+    // Simulating registration - in a real app, this would be an API call
     setTimeout(() => {
-      // In a real app, this would be an API call
-      const mockUser = {
-        id: Math.random().toString(36).substring(2, 9),
-        name: values.name,
-        email: values.email,
-        role: values.role,
-        createdAt: new Date(),
-        isVerified: false
-      };
+      // Store user info in localStorage (this is just for demo purposes)
+      localStorage.setItem('user', JSON.stringify({
+        email,
+        name,
+        role: accountType,
+        isLoggedIn: true
+      }));
       
-      localStorage.setItem('user', JSON.stringify(mockUser));
+      setIsLoading(false);
       
-      toast.success('Account created successfully!');
+      // Show success message
+      toast({
+        title: "Registration successful",
+        description: "Your account has been created. Welcome to Threadly!",
+      });
       
-      // Redirect based on user role
-      redirectBasedOnRole(navigate);
-    }, 1000);
+      // Redirect to dashboard
+      navigate('/dashboard');
+    }, 1500);
   };
 
   return (
     <>
       <Navbar />
-      <main className="pt-32 pb-16 min-h-screen">
-        <div className="container max-w-md mx-auto px-4">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">Welcome</h1>
-            <p className="text-muted-foreground">
-              Sign in to your account or create a new one
-            </p>
+      <main className="pt-24 pb-16 min-h-screen">
+        <div className="container mx-auto px-4 md:px-6 max-w-md">
+          <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-border">
+            <Tabs defaultValue="login" className="w-full">
+              <TabsList className="w-full grid grid-cols-2">
+                <TabsTrigger value="login" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-none">
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Login
+                </TabsTrigger>
+                <TabsTrigger value="register" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-none">
+                  <User className="w-4 h-4 mr-2" />
+                  Register
+                </TabsTrigger>
+              </TabsList>
+              
+              {/* Login Form */}
+              <TabsContent value="login" className="p-6">
+                <form onSubmit={handleLogin}>
+                  <h2 className="text-2xl font-medium mb-6 text-center">Welcome Back</h2>
+                  
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label htmlFor="email" className="text-sm font-medium">
+                        Email Address
+                      </label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+                        <Input 
+                          id="email" 
+                          type="email" 
+                          placeholder="your@email.com" 
+                          className="pl-10" 
+                          required
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label htmlFor="password" className="text-sm font-medium">
+                          Password
+                        </label>
+                        <Link to="/forgot-password" className="text-xs text-primary hover:underline">
+                          Forgot password?
+                        </Link>
+                      </div>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+                        <Input 
+                          id="password" 
+                          type={showPassword ? "text" : "password"} 
+                          placeholder="********" 
+                          className="pl-10" 
+                          required
+                        />
+                        <button 
+                          type="button"
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="w-5 h-5" />
+                          ) : (
+                            <Eye className="w-5 h-5" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? "Signing in..." : "Sign In"}
+                    </Button>
+                  </div>
+                  
+                  <div className="mt-6 text-center text-sm text-muted-foreground">
+                    Don't have an account yet?{' '}
+                    <button 
+                      type="button"
+                      className="text-primary font-medium hover:underline"
+                      onClick={() => document.querySelector('[value="register"]')?.dispatchEvent(new MouseEvent('click'))}
+                    >
+                      Sign up
+                    </button>
+                  </div>
+                </form>
+              </TabsContent>
+              
+              {/* Register Form */}
+              <TabsContent value="register" className="p-6">
+                <form onSubmit={handleRegister}>
+                  <h2 className="text-2xl font-medium mb-6 text-center">Create Your Account</h2>
+                  
+                  <div className="mb-6">
+                    <p className="text-sm text-muted-foreground mb-3">I am registering as:</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { value: UserRole.CUSTOMER, label: "Customer", icon: User },
+                        { value: UserRole.WEAVER, label: "Weaver", icon: BadgeCheck }
+                      ].map((type) => (
+                        <button
+                          key={type.value}
+                          type="button"
+                          className={cn(
+                            "flex items-center justify-center gap-2 p-3 rounded-lg border transition-all",
+                            accountType === type.value
+                              ? "border-primary bg-primary/5 text-primary"
+                              : "border-border hover:border-primary/30"
+                          )}
+                          onClick={() => setAccountType(type.value)}
+                        >
+                          <type.icon className={cn(
+                            "w-5 h-5",
+                            accountType === type.value ? "text-primary" : "text-muted-foreground"
+                          )} />
+                          <span>{type.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label htmlFor="reg-name" className="text-sm font-medium">
+                        Full Name
+                      </label>
+                      <Input 
+                        id="reg-name" 
+                        type="text" 
+                        placeholder="John Doe" 
+                        required
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label htmlFor="reg-email" className="text-sm font-medium">
+                        Email Address
+                      </label>
+                      <Input 
+                        id="reg-email" 
+                        type="email" 
+                        placeholder="your@email.com" 
+                        required
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label htmlFor="reg-password" className="text-sm font-medium">
+                        Password
+                      </label>
+                      <div className="relative">
+                        <Input 
+                          id="reg-password" 
+                          type={showPassword ? "text" : "password"} 
+                          placeholder="Create a strong password" 
+                          required
+                        />
+                        <button 
+                          type="button"
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="w-5 h-5" />
+                          ) : (
+                            <Eye className="w-5 h-5" />
+                          )}
+                        </button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Must be at least 8 characters with a mix of letters, numbers, and symbols.
+                      </p>
+                    </div>
+                    
+                    {accountType === UserRole.WEAVER && (
+                      <div className="space-y-2">
+                        <label htmlFor="weaver-bio" className="text-sm font-medium">
+                          Brief Introduction
+                        </label>
+                        <textarea 
+                          id="weaver-bio" 
+                          placeholder="Describe your weaving expertise, techniques, and experience..." 
+                          className="w-full p-2 border border-border rounded-md min-h-[100px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                          required
+                        />
+                      </div>
+                    )}
+                    
+                    <div className="flex items-start pt-2">
+                      <input 
+                        type="checkbox" 
+                        id="terms" 
+                        className="mt-1 mr-2" 
+                        required
+                      />
+                      <label htmlFor="terms" className="text-sm text-muted-foreground">
+                        I agree to the{' '}
+                        <Link to="/terms" className="text-primary hover:underline">
+                          Terms of Service
+                        </Link>
+                        {' '}and{' '}
+                        <Link to="/privacy" className="text-primary hover:underline">
+                          Privacy Policy
+                        </Link>
+                      </label>
+                    </div>
+                    
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? "Creating Account..." : "Create Account"}
+                    </Button>
+                  </div>
+                  
+                  <div className="mt-6 text-center text-sm text-muted-foreground">
+                    Already have an account?{' '}
+                    <button 
+                      type="button"
+                      className="text-primary font-medium hover:underline"
+                      onClick={() => document.querySelector('[value="login"]')?.dispatchEvent(new MouseEvent('click'))}
+                    >
+                      Sign in
+                    </button>
+                  </div>
+                </form>
+              </TabsContent>
+            </Tabs>
           </div>
-          
-          <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Register</TabsTrigger>
-            </TabsList>
-            
-            {/* Login Tab */}
-            <TabsContent value="login">
-              <div className="p-6 border rounded-lg shadow-sm bg-card">
-                <Form {...loginForm}>
-                  <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
-                    <FormField
-                      control={loginForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input placeholder="you@example.com" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={loginForm.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Password</FormLabel>
-                          <FormControl>
-                            <Input type="password" placeholder="••••••••" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <Button type="submit" className="w-full" disabled={loginForm.formState.isSubmitting}>
-                      {loginForm.formState.isSubmitting ? 'Signing in...' : 'Sign In'}
-                    </Button>
-                  </form>
-                </Form>
-              </div>
-            </TabsContent>
-            
-            {/* Register Tab */}
-            <TabsContent value="register">
-              <div className="p-6 border rounded-lg shadow-sm bg-card">
-                <Form {...registerForm}>
-                  <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
-                    <FormField
-                      control={registerForm.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Full Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="John Doe" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={registerForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input placeholder="you@example.com" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={registerForm.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Password</FormLabel>
-                          <FormControl>
-                            <Input type="password" placeholder="••••••••" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={registerForm.control}
-                      name="confirmPassword"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Confirm Password</FormLabel>
-                          <FormControl>
-                            <Input type="password" placeholder="••••••••" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={registerForm.control}
-                      name="role"
-                      render={({ field }) => (
-                        <FormItem className="space-y-3">
-                          <FormLabel>Account Type</FormLabel>
-                          <FormControl>
-                            <RadioGroup
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
-                              className="flex flex-col space-y-1"
-                            >
-                              <FormItem className="flex items-center space-x-3 space-y-0">
-                                <FormControl>
-                                  <RadioGroupItem value={UserRole.CUSTOMER} />
-                                </FormControl>
-                                <FormLabel className="font-normal">
-                                  Customer - Browse and buy handloom products
-                                </FormLabel>
-                              </FormItem>
-                              <FormItem className="flex items-center space-x-3 space-y-0">
-                                <FormControl>
-                                  <RadioGroupItem value={UserRole.WEAVER} />
-                                </FormControl>
-                                <FormLabel className="font-normal">
-                                  Weaver - Sell your handloom products
-                                </FormLabel>
-                              </FormItem>
-                            </RadioGroup>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <Button type="submit" className="w-full" disabled={registerForm.formState.isSubmitting}>
-                      {registerForm.formState.isSubmitting ? 'Creating Account...' : 'Create Account'}
-                    </Button>
-                  </form>
-                </Form>
-              </div>
-            </TabsContent>
-          </Tabs>
         </div>
       </main>
       <Footer />
