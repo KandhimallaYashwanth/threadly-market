@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
@@ -26,24 +25,22 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
 import { isAuthenticated, getCurrentUser, redirectBasedOnRole } from '@/lib/auth';
 import { UserRole } from '@/lib/types';
 
 const Navbar = () => {
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [user, setUser] = useState<any>(null);
 
-  // Check if user is logged in
   useEffect(() => {
     const userFromStorage = getCurrentUser();
     setUser(userFromStorage);
   }, []);
 
-  // Handle navigation based on authentication and user role
   const handleNavigateRequiringAuth = (path: string) => {
     if (isAuthenticated()) {
       navigate(path);
@@ -55,7 +52,6 @@ const Navbar = () => {
     }
   };
 
-  // Handle logout
   const handleLogout = () => {
     localStorage.removeItem('user');
     setUser(null);
@@ -63,7 +59,6 @@ const Navbar = () => {
     navigate('/');
   };
 
-  // Change navbar background on scroll
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 10) {
@@ -85,13 +80,11 @@ const Navbar = () => {
     >
       <div className="container mx-auto px-4 md:px-6">
         <div className="flex items-center justify-between">
-          {/* Logo */}
           <Link to="/" className="flex items-center">
             <span className="text-2xl font-bold">तंतु</span>
             <span className="text-sm ml-2 text-primary">TANTU</span>
           </Link>
           
-          {/* Desktop Navigation */}
           {!isMobile && (
             <nav className="hidden md:flex items-center space-x-8">
               <Link to="/" className="text-foreground hover:text-primary transition-colors">
@@ -112,7 +105,6 @@ const Navbar = () => {
             </nav>
           )}
           
-          {/* Desktop Right Menu */}
           {!isMobile && (
             <div className="flex items-center space-x-4">
               <div className="relative mr-2">
@@ -178,7 +170,6 @@ const Navbar = () => {
             </div>
           )}
           
-          {/* Mobile Menu */}
           {isMobile && (
             <div className="flex items-center space-x-2">
               <Button 
