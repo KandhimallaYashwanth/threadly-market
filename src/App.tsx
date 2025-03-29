@@ -14,8 +14,6 @@ import Contact from "@/pages/Contact";
 import Chat from "@/pages/Chat";
 import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
-import CustomerDashboard from "@/pages/dashboard/CustomerDashboard";
-import WeaverDashboard from "@/pages/dashboard/WeaverDashboard";
 import Cart from "@/pages/Cart";
 import NotFound from "@/pages/NotFound";
 
@@ -38,8 +36,6 @@ const App = () => (
           <Route path="/chat/:id" element={<Chat />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/dashboard/customer" element={<CustomerDashboard />} />
-          <Route path="/dashboard/weaver" element={<WeaverDashboard />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
