@@ -274,7 +274,7 @@ export const defaultMessages: Message[] = [
     id: 'm3',
     senderId: 'c1',
     receiverId: 'w1',
-    content: 'That would be great! Also, what's the delivery time for this item?',
+    content: "That would be great! Also, what's the delivery time for this item?",
     isRead: true,
     createdAt: new Date('2023-08-15T11:20:00')
   },
