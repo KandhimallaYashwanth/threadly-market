@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -27,7 +28,8 @@ import {
   Upload,
   Image,
   FileText,
-  Save
+  Save,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
