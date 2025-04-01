@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Package, 
@@ -8,8 +8,7 @@ import {
   User, 
   Settings, 
   Clock, 
-  LogOut,
-  Search
+  LogOut
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +16,9 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
-import { UserRole, OrderStatus } from '@/lib/types';
+import ConversationsList from '@/components/dashboard/ConversationsList';
+import ChatSection from '@/components/dashboard/ChatSection';
+import { UserRole, OrderStatus, User as UserType, DEFAULT_USERS } from '@/lib/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -46,33 +47,18 @@ const mockOrders = [
   }
 ];
 
-// Mock conversations data
-const mockConversations = [
-  {
-    id: 'conv-001',
-    weaverId: '1',
-    weaverName: 'Anita Sharma',
-    weaverAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=1064&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-    lastMessage: 'Your order is being prepared',
-    timestamp: new Date(2023, 8, 25),
-    unread: true
-  },
-  {
-    id: 'conv-002',
-    weaverId: '2',
-    weaverName: 'Rajesh Kumar',
-    weaverAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-    lastMessage: 'Thank you for your order!',
-    timestamp: new Date(2023, 8, 20),
-    unread: false
-  }
-];
-
 const CustomerDashboard = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('orders');
-  const [user, setUser] = useState<any>(null);
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const tabFromQuery = queryParams.get('tab');
+  const weaverIdFromQuery = queryParams.get('weaver');
+  
+  const [activeTab, setActiveTab] = useState(tabFromQuery || 'orders');
+  const [user, setUser] = useState<UserType | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedWeaver, setSelectedWeaver] = useState<UserType | null>(null);
+  const [orders, setOrders] = useState(mockOrders);
 
   // Get status color based on order status
   const getStatusColor = (status: OrderStatus) => {
@@ -102,8 +88,43 @@ const CustomerDashboard = () => {
       day: 'numeric'
     }).format(date);
   };
+  
+  // Handle selecting a weaver for chat
+  const handleSelectWeaver = (weaver: UserType) => {
+    setSelectedWeaver(weaver);
+    
+    // Update URL without navigating
+    const params = new URLSearchParams(location.search);
+    params.set('tab', 'messages');
+    params.set('weaver', weaver.id);
+    navigate(`${location.pathname}?${params.toString()}`, { replace: true });
+  };
 
   useEffect(() => {
+    // Set active tab from query parameter
+    if (tabFromQuery) {
+      setActiveTab(tabFromQuery);
+    }
+    
+    // Try to find weaver from query parameter
+    if (weaverIdFromQuery) {
+      const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+      const foundWeaver = allUsers.find((u: UserType) => u.id === weaverIdFromQuery && u.role === UserRole.WEAVER);
+      if (foundWeaver) {
+        setSelectedWeaver(foundWeaver);
+      }
+    }
+    
+    // Load orders from localStorage
+    const storedOrders = localStorage.getItem('orders');
+    if (storedOrders) {
+      try {
+        setOrders(JSON.parse(storedOrders));
+      } catch (error) {
+        console.error('Error loading orders:', error);
+      }
+    }
+    
     // Check if user is logged in
     const storedUser = localStorage.getItem('user');
     
@@ -111,7 +132,7 @@ const CustomerDashboard = () => {
       const parsedUser = JSON.parse(storedUser);
       
       // Verify user role
-      if (parsedUser.role !== UserRole.CUSTOMER) {
+      if (parsedUser.role !== UserRole.CUSTOMER && parsedUser.role !== UserRole.ADMIN) {
         toast.error("Unauthorized access", {
           description: "This dashboard is for customers only."
         });
@@ -128,12 +149,26 @@ const CustomerDashboard = () => {
     }
     
     setLoading(false);
-  }, [navigate]);
+  }, [navigate, location.search, tabFromQuery, weaverIdFromQuery]);
 
   const handleLogout = () => {
     localStorage.removeItem('user');
     toast.success("Logged out successfully");
     navigate('/');
+  };
+  
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    
+    // Update URL without full page reload
+    const params = new URLSearchParams(location.search);
+    params.set('tab', value);
+    navigate(`${location.pathname}?${params.toString()}`, { replace: true });
+    
+    // Reset selected weaver if changing to a different tab
+    if (value !== 'messages') {
+      setSelectedWeaver(null);
+    }
   };
 
   // If loading or no user, show loading state
@@ -171,7 +206,7 @@ const CustomerDashboard = () => {
                     <Button 
                       variant={activeTab === 'orders' ? 'secondary' : 'ghost'} 
                       className="justify-start"
-                      onClick={() => setActiveTab('orders')}
+                      onClick={() => handleTabChange('orders')}
                     >
                       <Package className="mr-2 h-4 w-4" />
                       Orders
@@ -179,7 +214,7 @@ const CustomerDashboard = () => {
                     <Button 
                       variant={activeTab === 'messages' ? 'secondary' : 'ghost'} 
                       className="justify-start"
-                      onClick={() => setActiveTab('messages')}
+                      onClick={() => handleTabChange('messages')}
                     >
                       <MessageSquare className="mr-2 h-4 w-4" />
                       Messages
@@ -187,7 +222,7 @@ const CustomerDashboard = () => {
                     <Button 
                       variant={activeTab === 'profile' ? 'secondary' : 'ghost'} 
                       className="justify-start"
-                      onClick={() => setActiveTab('profile')}
+                      onClick={() => handleTabChange('profile')}
                     >
                       <User className="mr-2 h-4 w-4" />
                       Profile
@@ -195,7 +230,7 @@ const CustomerDashboard = () => {
                     <Button 
                       variant={activeTab === 'settings' ? 'secondary' : 'ghost'} 
                       className="justify-start"
-                      onClick={() => setActiveTab('settings')}
+                      onClick={() => handleTabChange('settings')}
                     >
                       <Settings className="mr-2 h-4 w-4" />
                       Settings
@@ -223,7 +258,7 @@ const CustomerDashboard = () => {
                     <CardDescription>Track your past and current orders</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {mockOrders.length === 0 ? (
+                    {orders.length === 0 ? (
                       <div className="text-center py-8">
                         <p className="text-muted-foreground">You haven't placed any orders yet.</p>
                         <Button className="mt-4" onClick={() => navigate('/products')}>
@@ -232,7 +267,7 @@ const CustomerDashboard = () => {
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        {mockOrders.map((order) => (
+                        {orders.map((order) => (
                           <div 
                             key={order.id} 
                             className="border rounded-lg p-4 hover:shadow-md transition-shadow"
@@ -285,64 +320,22 @@ const CustomerDashboard = () => {
               
               {/* Messages Tab */}
               {activeTab === 'messages' && (
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <div>
-                      <CardTitle>Messages</CardTitle>
-                      <CardDescription>Your conversations with artisans</CardDescription>
+                <Card className="h-[calc(100vh-250px)]">
+                  <div className="grid grid-cols-1 md:grid-cols-3 h-full divide-x">
+                    <div className="p-4 md:col-span-1 overflow-hidden">
+                      <ConversationsList 
+                        currentUser={user} 
+                        onSelectWeaver={handleSelectWeaver}
+                        selectedWeaverId={selectedWeaver?.id}
+                      />
                     </div>
-                    <div className="relative w-64">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                      <Input placeholder="Search messages..." className="pl-10" />
+                    <div className="md:col-span-2 p-4 overflow-hidden flex flex-col">
+                      <ChatSection 
+                        selectedWeaver={selectedWeaver || undefined} 
+                        currentUser={user}
+                      />
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    {mockConversations.length === 0 ? (
-                      <div className="text-center py-8">
-                        <p className="text-muted-foreground">You don't have any messages yet.</p>
-                        <Button className="mt-4" onClick={() => navigate('/weavers')}>
-                          Find Artisans
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {mockConversations.map((conversation) => (
-                          <div 
-                            key={conversation.id} 
-                            className={cn(
-                              "flex items-center gap-4 p-3 rounded-lg cursor-pointer transition-colors",
-                              conversation.unread 
-                                ? "bg-primary/5 hover:bg-primary/10" 
-                                : "hover:bg-secondary/80"
-                            )}
-                            onClick={() => navigate(`/chat/${conversation.weaverId}`)}
-                          >
-                            <Avatar>
-                              <AvatarImage src={conversation.weaverAvatar} />
-                              <AvatarFallback>{conversation.weaverName.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex justify-between items-baseline">
-                                <h4 className="font-medium truncate">{conversation.weaverName}</h4>
-                                <span className="text-xs text-muted-foreground">
-                                  {formatDate(conversation.timestamp)}
-                                </span>
-                              </div>
-                              <p className={cn(
-                                "text-sm truncate",
-                                conversation.unread ? "font-medium text-foreground" : "text-muted-foreground"
-                              )}>
-                                {conversation.lastMessage}
-                              </p>
-                            </div>
-                            {conversation.unread && (
-                              <div className="w-2 h-2 bg-primary rounded-full"></div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
+                  </div>
                 </Card>
               )}
               
@@ -357,13 +350,13 @@ const CustomerDashboard = () => {
                     <div className="space-y-4">
                       <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
                         <Avatar className="w-20 h-20">
-                          <AvatarImage src="https://images.unsplash.com/photo-1494790108377-be9c29b29330" />
+                          <AvatarImage src={user.avatar || "https://images.unsplash.com/photo-1494790108377-be9c29b29330"} />
                           <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div>
                           <h3 className="text-xl font-semibold">{user.name}</h3>
                           <p className="text-muted-foreground">{user.email}</p>
-                          <p className="text-sm text-muted-foreground">Member since {new Date().toLocaleDateString()}</p>
+                          <p className="text-sm text-muted-foreground">Member since {formatDate(user.createdAt)}</p>
                         </div>
                       </div>
                       

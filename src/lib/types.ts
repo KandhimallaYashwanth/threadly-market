@@ -14,6 +14,7 @@ export interface User {
   bio?: string;
   isVerified?: boolean;
   createdAt: Date;
+  password?: string; // For demo users only
 }
 
 export enum FabricType {
@@ -40,8 +41,9 @@ export interface Product {
   reviewCount?: number;
   tags: string[];
   createdAt: Date;
-  codAvailable?: boolean;
-  upiEnabled?: boolean;
+  codAvailable: boolean; // Changed from optional to required
+  upiEnabled: boolean; // Changed from optional to required
+  cardEnabled: boolean; // Added for completeness
 }
 
 export enum OrderStatus {
@@ -51,6 +53,12 @@ export enum OrderStatus {
   SHIPPED = 'shipped',
   DELIVERED = 'delivered',
   CANCELLED = 'cancelled'
+}
+
+export enum PaymentMethod {
+  CARD = 'card',
+  UPI = 'upi',
+  COD = 'cod'
 }
 
 export interface OrderItem {
@@ -67,7 +75,7 @@ export interface Order {
   items: OrderItem[];
   status: OrderStatus;
   total: number;
-  paymentMethod?: string;
+  paymentMethod: PaymentMethod;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -98,3 +106,51 @@ export interface Conversation {
   lastMessage?: Message;
   updatedAt: Date;
 }
+
+// Add default users for demo
+export const DEFAULT_USERS: User[] = [
+  {
+    id: 'w1',
+    name: 'Aruna Patel',
+    email: 'arunapatel@gmail.com',
+    role: UserRole.WEAVER,
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=1364&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    bio: 'Expert in traditional silk sarees with over 20 years of experience',
+    createdAt: new Date(2022, 1, 15)
+  },
+  {
+    id: 'w2',
+    name: 'Rajesh Kumar',
+    email: 'rajeshkumar@gmail.com',
+    role: UserRole.WEAVER,
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    bio: 'Specializes in cotton fabrics with natural dyes',
+    createdAt: new Date(2022, 3, 10)
+  },
+  {
+    id: 'w3',
+    name: 'Lakshmi Devi',
+    email: 'lakshmidevi@gmail.com',
+    role: UserRole.WEAVER,
+    avatar: 'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    bio: 'Award-winning weaver specializing in intricate designs',
+    createdAt: new Date(2022, 5, 22)
+  },
+  {
+    id: 'w4',
+    name: 'Vikram Singh',
+    email: 'vikramsingh@gmail.com',
+    role: UserRole.WEAVER,
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    bio: 'Third generation weaver focusing on sustainable practices',
+    createdAt: new Date(2022, 7, 5)
+  },
+  {
+    id: 'c1',
+    name: 'Customer',
+    email: 'customer@gmail.com',
+    role: UserRole.CUSTOMER,
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    createdAt: new Date(2022, 9, 18)
+  }
+];

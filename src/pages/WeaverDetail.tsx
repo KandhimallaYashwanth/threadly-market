@@ -48,10 +48,6 @@ const WeaverDetail = () => {
     navigate(`/dashboard/customer?tab=messages&weaver=${id}`);
   };
   
-  const handleApplyToJoin = () => {
-    navigate('/auth?signup=weaver');
-  };
-  
   // Handle if weaver not found
   if (!weaver) {
     return (
@@ -159,9 +155,6 @@ const WeaverDetail = () => {
                   <Button variant="outline" onClick={handleShare} className="gap-2">
                     <Share2 className="h-4 w-4" />
                     Share
-                  </Button>
-                  <Button variant="secondary" onClick={handleApplyToJoin} className="gap-2 ml-auto">
-                    Apply to Join
                   </Button>
                 </div>
               </div>

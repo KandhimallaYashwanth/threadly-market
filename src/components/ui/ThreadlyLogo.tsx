@@ -7,9 +7,15 @@ interface ThreadlyLogoProps {
   className?: string;
   linkTo?: string;
   size?: 'sm' | 'md' | 'lg';
+  onClick?: () => void;
 }
 
-const ThreadlyLogo: React.FC<ThreadlyLogoProps> = ({ className, linkTo = '/', size = 'md' }) => {
+const ThreadlyLogo: React.FC<ThreadlyLogoProps> = ({ 
+  className, 
+  linkTo = '/', 
+  size = 'md',
+  onClick
+}) => {
   const sizeClasses = {
     sm: "text-xl",
     md: "text-2xl",
@@ -24,11 +30,19 @@ const ThreadlyLogo: React.FC<ThreadlyLogoProps> = ({ className, linkTo = '/', si
     </div>
   );
 
-  if (linkTo) {
+  if (linkTo && !onClick) {
     return (
       <Link to={linkTo} className="hover:opacity-90 transition-opacity">
         {Logo}
       </Link>
+    );
+  }
+  
+  if (onClick) {
+    return (
+      <button onClick={onClick} className="hover:opacity-90 transition-opacity">
+        {Logo}
+      </button>
     );
   }
 
