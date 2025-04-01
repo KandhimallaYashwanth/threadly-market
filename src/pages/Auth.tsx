@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { LogIn, BadgeCheck, User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
@@ -11,6 +10,7 @@ import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { UserRole } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { weavers, customers, initializeDefaultData } from '@/lib/data';
 
 const Auth = () => {
   const { toast: shadowToast } = useToast();
@@ -19,17 +19,32 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [accountType, setAccountType] = useState<UserRole>(UserRole.CUSTOMER);
   const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState('');
   
   // Check if user was redirected from another page
   const from = location.state?.from || '/';
   const redirectReason = location.state?.reason || '';
+  const weaverId = new URLSearchParams(location.search).get('weaver');
+  const isApplyToJoin = location.search.includes('applyToJoin=true');
 
   useEffect(() => {
+    // Initialize default data when the app loads
+    initializeDefaultData();
+    
     // Display message if redirected for a specific reason
     if (redirectReason === 'auth-required') {
       toast.info('Please log in to continue');
     }
-  }, [redirectReason]);
+    
+    // If applying to join, set account type to WEAVER
+    if (isApplyToJoin) {
+      setAccountType(UserRole.WEAVER);
+      // Switch to register tab
+      setTimeout(() => {
+        document.querySelector('[value="register"]')?.dispatchEvent(new MouseEvent('click'));
+      }, 100);
+    }
+  }, [redirectReason, isApplyToJoin]);
   
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,20 +53,18 @@ const Auth = () => {
     // Get form data
     const form = e.target as HTMLFormElement;
     const email = (form.querySelector('#email') as HTMLInputElement).value;
-    const password = (form.querySelector('#password') as HTMLInputElement).value;
     
-    // Simulating authentication - in a real app, this would be an API call
-    setTimeout(() => {
-      // For demo, assume all logins are successful
-      // Set user role based on email pattern for demo purposes
-      const isWeaver = email.includes('weaver') || email.includes('artisan');
-      const userRole = isWeaver ? UserRole.WEAVER : UserRole.CUSTOMER;
+    // Check if this is a default weaver or customer
+    const defaultWeaver = weavers.find(w => w.email.toLowerCase() === email.toLowerCase());
+    const defaultCustomer = customers.find(c => c.email.toLowerCase() === email.toLowerCase());
+    
+    // For demo purposes, allow login for default users without password
+    if (defaultWeaver || defaultCustomer) {
+      const user = defaultWeaver || defaultCustomer;
       
       // Store user info in localStorage
       localStorage.setItem('user', JSON.stringify({
-        email,
-        name: email.split('@')[0],
-        role: userRole,
+        ...user,
         isLoggedIn: true
       }));
       
@@ -63,11 +76,56 @@ const Auth = () => {
       });
       
       // Redirect based on role
+      if (user?.role === UserRole.WEAVER) {
+        navigate('/dashboard/weaver');
+      } else {
+        // If coming from a weaver profile and wanted to message, redirect to message section
+        if (weaverId) {
+          navigate(`/dashboard/customer?tab=messages&weaver=${weaverId}`);
+        } else {
+          // Otherwise redirect to default location
+          navigate(from === '/auth' ? '/dashboard/customer' : from);
+        }
+      }
+      return;
+    }
+    
+    // For non-default users (would normally check credentials against backend)
+    setTimeout(() => {
+      // For demo, assume all non-default email logins are successful with customer role
+      // Set user role based on email pattern for demo purposes
+      const isWeaver = email.includes('weaver') || email.includes('artisan');
+      const userRole = isWeaver ? UserRole.WEAVER : UserRole.CUSTOMER;
+      
+      // Store user info in localStorage
+      localStorage.setItem('user', JSON.stringify({
+        id: `new-${Date.now()}`,
+        email,
+        name: email.split('@')[0],
+        role: userRole,
+        avatar: 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1180&q=80',
+        createdAt: new Date(),
+        isLoggedIn: true
+      }));
+      
+      setIsLoading(false);
+      
+      // Show success message
+      toast.success("Login successful", {
+        description: "Welcome to Threadly!"
+      });
+      
+      // Redirect based on role
       if (userRole === UserRole.WEAVER) {
         navigate('/dashboard/weaver');
       } else {
-        // If redirected from a specific page, go back there
-        navigate(from === '/auth' ? '/dashboard/customer' : from);
+        // If coming from a weaver profile and wanted to message, redirect to message section
+        if (weaverId) {
+          navigate(`/dashboard/customer?tab=messages&weaver=${weaverId}`);
+        } else {
+          // Otherwise redirect to default location
+          navigate(from === '/auth' ? '/dashboard/customer' : from);
+        }
       }
     }, 1500);
   };
@@ -80,16 +138,37 @@ const Auth = () => {
     const form = e.target as HTMLFormElement;
     const name = (form.querySelector('#reg-name') as HTMLInputElement).value;
     const email = (form.querySelector('#reg-email') as HTMLInputElement).value;
+    const bio = accountType === UserRole.WEAVER 
+      ? (form.querySelector('#weaver-bio') as HTMLTextAreaElement).value 
+      : '';
     
     // Simulating registration
     setTimeout(() => {
-      // Store user info in localStorage
-      localStorage.setItem('user', JSON.stringify({
-        email,
+      // Generate a unique ID for the new user
+      const userId = `new-${Date.now()}`;
+      
+      // Create user object
+      const newUser = {
+        id: userId,
         name,
+        email,
         role: accountType,
+        bio: accountType === UserRole.WEAVER ? bio : undefined,
+        avatar: 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1180&q=80',
+        createdAt: new Date(),
+        isVerified: accountType === UserRole.WEAVER ? false : undefined,
         isLoggedIn: true
-      }));
+      };
+      
+      // Store user info in localStorage
+      localStorage.setItem('user', JSON.stringify(newUser));
+      
+      // Add to users list if weaver
+      if (accountType === UserRole.WEAVER) {
+        const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
+        existingUsers.push(newUser);
+        localStorage.setItem('users', JSON.stringify(existingUsers));
+      }
       
       setIsLoading(false);
       
@@ -102,8 +181,13 @@ const Auth = () => {
       if (accountType === UserRole.WEAVER) {
         navigate('/dashboard/weaver');
       } else {
-        // If redirected from a specific page, go back there
-        navigate(from === '/auth' ? '/dashboard/customer' : from);
+        // If coming from a weaver profile and wanted to message, redirect to message section
+        if (weaverId) {
+          navigate(`/dashboard/customer?tab=messages&weaver=${weaverId}`);
+        } else {
+          // Otherwise redirect to default location
+          navigate(from === '/auth' ? '/dashboard/customer' : from);
+        }
       }
     }, 1500);
   };
@@ -144,6 +228,8 @@ const Auth = () => {
                           placeholder="your@email.com" 
                           className="pl-10" 
                           required
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
                         />
                       </div>
                     </div>
@@ -183,6 +269,41 @@ const Auth = () => {
                     <Button type="submit" className="w-full" disabled={isLoading}>
                       {isLoading ? "Signing in..." : "Sign In"}
                     </Button>
+                    
+                    {/* Quick login buttons for demo */}
+                    <div className="mt-4">
+                      <p className="text-sm text-center text-muted-foreground mb-2">Demo Quick Login</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            setEmail('customer@gmail.com');
+                            setTimeout(() => {
+                              const form = document.querySelector('form') as HTMLFormElement;
+                              form.dispatchEvent(new Event('submit', { cancelable: true }));
+                            }, 100);
+                          }}
+                        >
+                          Customer
+                        </Button>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            setEmail('arunapatel@gmail.com');
+                            setTimeout(() => {
+                              const form = document.querySelector('form') as HTMLFormElement;
+                              form.dispatchEvent(new Event('submit', { cancelable: true }));
+                            }, 100);
+                          }}
+                        >
+                          Weaver
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                   
                   <div className="mt-6 text-center text-sm text-muted-foreground">
