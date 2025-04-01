@@ -290,7 +290,10 @@ const CustomerDashboard = () => {
                                 </p>
                               </div>
                               <div className="mt-2 md:mt-0 flex flex-col items-start md:items-end">
-                                <p className="font-medium">₹{order.total.toLocaleString()}</p>
+                                <p className="font-medium">
+                                  {/* Add null check for order.total */}
+                                  ₹{order.total ? order.total.toLocaleString() : '0'}
+                                </p>
                                 <Button 
                                   variant="ghost" 
                                   size="sm" 
@@ -304,11 +307,18 @@ const CustomerDashboard = () => {
                             
                             <div className="mt-3 pt-3 border-t">
                               <p className="text-sm font-medium">Items:</p>
-                              <ul className="text-sm text-muted-foreground">
-                                {order.items.map((item, idx) => (
-                                  <li key={idx}>{item.name} - ₹{item.price.toLocaleString()}</li>
-                                ))}
-                              </ul>
+                              {/* Add null check for order.items */}
+                              {order.items && order.items.length > 0 ? (
+                                <ul className="text-sm text-muted-foreground">
+                                  {order.items.map((item, idx) => (
+                                    <li key={idx}>
+                                      {item.name} - ₹{item.price ? item.price.toLocaleString() : '0'}
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <p className="text-sm text-muted-foreground">No items available</p>
+                              )}
                             </div>
                           </div>
                         ))}
