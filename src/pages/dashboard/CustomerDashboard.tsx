@@ -305,9 +305,15 @@ const CustomerDashboard = () => {
                             <div className="mt-3 pt-3 border-t">
                               <p className="text-sm font-medium">Items:</p>
                               <ul className="text-sm text-muted-foreground">
-                                {order.items.map((item, idx) => (
-                                  <li key={idx}>{item.name} - ₹{item.price ? item.price.toLocaleString() : '0'}</li>
-                                ))}
+                                {order.items && order.items.map ? (
+                                  order.items.map((item, idx) => (
+                                    <li key={idx}>
+                                      {item.name} - ₹{item.price ? item.price.toLocaleString() : '0'}
+                                    </li>
+                                  ))
+                                ) : (
+                                  <li>No items available</li>
+                                )}
                               </ul>
                             </div>
                           </div>
