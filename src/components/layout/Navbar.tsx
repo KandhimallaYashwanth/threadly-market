@@ -2,13 +2,23 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
-  Menu, X, Search, ShoppingCart, User, Bell, LogIn 
+  Menu, X, Search, ShoppingCart, User, Bell, LogIn, LogOut 
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
+import { UserRole } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { toast } from 'sonner';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -16,8 +26,9 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { toast } = useToast();
+  const { toast: shadowToast } = useToast();
   const [cartCount, setCartCount] = useState(0);
+  const [user, setUser] = useState<any>(null);
 
   // Check if we're on the homepage
   const isHomePage = location.pathname === '/';
@@ -32,6 +43,16 @@ const Navbar = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Check for user authentication status
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    } else {
+      setUser(null);
+    }
+  }, [location.pathname]);
 
   // Check for cart items in localStorage
   useEffect(() => {
@@ -77,6 +98,27 @@ const Navbar = () => {
   const handleCartClick = () => {
     navigate('/cart');
   };
+  
+  const handleDashboardClick = () => {
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+    
+    // Direct to appropriate dashboard based on role
+    if (user.role === UserRole.WEAVER) {
+      navigate('/dashboard/weaver');
+    } else {
+      navigate('/dashboard/customer');
+    }
+  };
+  
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    setUser(null);
+    toast.success("Logged out successfully");
+    navigate('/');
+  };
 
   return (
     <nav
@@ -105,10 +147,10 @@ const Navbar = () => {
                 to={link.href}
                 className={cn(
                   'px-3 py-2 text-sm font-medium transition-colors relative',
-                  'after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-primary after:transition-all hover:after:w-full',
+                  'hover:text-primary/90',
                   location.pathname === link.href 
-                    ? 'text-primary after:w-full'
-                    : 'text-foreground hover:text-primary/90'
+                    ? 'text-primary after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-full after:bg-primary'
+                    : 'text-foreground'
                 )}
               >
                 {link.name}
@@ -133,6 +175,7 @@ const Navbar = () => {
               <Bell className="w-5 h-5" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full"></span>
             </Button>
+            
             <Button variant="ghost" size="icon" className="relative" onClick={handleCartClick}>
               <ShoppingCart className="w-5 h-5" />
               {cartCount > 0 && (
@@ -141,15 +184,53 @@ const Navbar = () => {
                 </span>
               )}
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
-              <User className="w-5 h-5" />
-            </Button>
-            <Button asChild size="sm" className="ml-2">
-              <Link to="/auth">
-                <LogIn className="w-4 h-4 mr-2" />
-                Sign In
-              </Link>
-            </Button>
+            
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 overflow-hidden">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage 
+                        src={user.avatar || `https://ui-avatars.com/api/?name=${user.name}`} 
+                        alt={user.name} 
+                      />
+                      <AvatarFallback>{user.name?.charAt(0) || 'U'}</AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <div className="flex items-center gap-2 p-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage 
+                        src={user.avatar || `https://ui-avatars.com/api/?name=${user.name}`} 
+                        alt={user.name} 
+                      />
+                      <AvatarFallback>{user.name?.charAt(0) || 'U'}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium text-sm">{user.name}</p>
+                      <p className="text-xs text-muted-foreground">{user.email}</p>
+                    </div>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleDashboardClick}>
+                    <User className="mr-2 h-4 w-4" />
+                    Dashboard
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button asChild size="sm">
+                <Link to="/auth">
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Sign In
+                </Link>
+              </Button>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -201,18 +282,49 @@ const Navbar = () => {
                   <ShoppingCart className="w-4 h-4 mr-2" />
                   Cart {cartCount > 0 && `(${cartCount})`}
                 </Button>
+                
+                {user ? (
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      handleDashboardClick();
+                    }}
+                  >
+                    <User className="w-4 h-4 mr-2" />
+                    Dashboard
+                  </Button>
+                ) : (
+                  <Button 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      navigate('/auth');
+                    }}
+                  >
+                    <LogIn className="w-4 h-4 mr-2" />
+                    Sign In
+                  </Button>
+                )}
+              </div>
+              
+              {user && (
                 <Button 
-                  size="sm" 
-                  className="flex-1"
+                  variant="ghost"
+                  size="sm"
+                  className="w-full mt-3 text-red-500 hover:text-red-600 hover:bg-red-50"
                   onClick={() => {
+                    handleLogout();
                     setMobileMenuOpen(false);
-                    navigate('/auth');
                   }}
                 >
-                  <LogIn className="w-4 h-4 mr-2" />
-                  Sign In
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Logout
                 </Button>
-              </div>
+              )}
             </div>
           </div>
         )}
