@@ -1,49 +1,24 @@
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
-import { weavers, products, getAllWeavers, getAllProducts } from '@/lib/data';
+import { weavers, products } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, MessageSquare, Share2, Star } from 'lucide-react';
 import ProductCard from '@/components/ui/ProductCard';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { UserRole } from '@/lib/types';
 
 const WeaverDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [isCustomer, setIsCustomer] = useState(false);
-
-  // Find the weaver by ID from all weavers (including newly registered ones)
-  const [allWeavers, setAllWeavers] = useState(weavers);
-  const [allProducts, setAllProducts] = useState(products);
   
-  useEffect(() => {
-    // Get all weavers including newly registered ones
-    setAllWeavers(getAllWeavers());
-    
-    // Get all products including newly added ones
-    setAllProducts(getAllProducts());
-    
-    // Check if current user is a customer
-    const userString = localStorage.getItem('user');
-    if (userString) {
-      try {
-        const user = JSON.parse(userString);
-        setIsCustomer(user.role === UserRole.CUSTOMER);
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-      }
-    }
-  }, []);
-
   // Find the weaver by ID
-  const weaver = allWeavers.find(w => w.id === id);
+  const weaver = weavers.find(w => w.id === id);
   
   // Get weaver's products
-  const weaverProducts = allProducts.filter(p => p.weaverId === id);
+  const weaverProducts = products.filter(p => p.weaverId === id);
   
   // Calculate average rating
   const ratings = weaverProducts
@@ -59,28 +34,18 @@ const WeaverDetail = () => {
     const user = localStorage.getItem('user');
     if (!user) {
       toast("Please sign in to send messages");
-      navigate(`/auth?weaver=${id}`);
+      navigate('/auth');
       return;
     }
     
     const userData = JSON.parse(user);
-    if (userData.role === UserRole.WEAVER) {
+    if (userData.role === 'weaver') {
       toast("Weavers cannot message other weavers");
       return;
     }
     
-    // Smooth scroll to the message section on the dashboard
+    // Redirect to dashboard with chat section opened for this weaver
     navigate(`/dashboard/customer?tab=messages&weaver=${id}`);
-  };
-  
-  const handleApplyToJoin = () => {
-    if (isCustomer) {
-      toast("You are already a customer");
-      return;
-    }
-    
-    // If not a customer, redirect to signup page with weaver role preset
-    navigate('/auth?applyToJoin=true');
   };
   
   // Handle if weaver not found

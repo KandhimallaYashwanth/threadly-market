@@ -18,10 +18,28 @@ import CustomerDashboard from "@/pages/dashboard/CustomerDashboard";
 import WeaverDashboard from "@/pages/dashboard/WeaverDashboard";
 import Cart from "@/pages/Cart";
 import NotFound from "@/pages/NotFound";
-import { User, UserRole } from "./lib/types";
-import { initializeDefaultData } from "./lib/data";
+import { User, UserRole, DEFAULT_USERS } from "./lib/types";
 
 const queryClient = new QueryClient();
+
+// Initialize default users if not already in localStorage
+const initializeDefaultUsers = () => {
+  // Check if users already exist
+  if (!localStorage.getItem('usersInitialized')) {
+    // Store default users in localStorage
+    DEFAULT_USERS.forEach(user => {
+      const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
+      const userExists = existingUsers.some((u: User) => u.email === user.email);
+      
+      if (!userExists) {
+        existingUsers.push(user);
+        localStorage.setItem('users', JSON.stringify(existingUsers));
+      }
+    });
+    
+    localStorage.setItem('usersInitialized', 'true');
+  }
+};
 
 // Protected route component for role-based access control
 const ProtectedRoute = ({ children, allowedRoles }: { children: JSX.Element, allowedRoles: UserRole[] }) => {
@@ -56,8 +74,8 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: JSX.Element, all
 
 const App = () => {
   useEffect(() => {
-    // Initialize default data when the app loads
-    initializeDefaultData();
+    // Initialize default users when the app loads
+    initializeDefaultUsers();
   }, []);
 
   return (
