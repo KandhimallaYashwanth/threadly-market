@@ -9,7 +9,96 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      products: {
+        Row: {
+          card_enabled: boolean | null
+          cod_available: boolean | null
+          created_at: string | null
+          description: string | null
+          discount: number | null
+          fabric_type: string
+          id: string
+          images: string[] | null
+          in_stock: boolean | null
+          name: string
+          price: number
+          rating: number | null
+          review_count: number | null
+          tags: string[] | null
+          upi_enabled: boolean | null
+          weaver_id: string
+        }
+        Insert: {
+          card_enabled?: boolean | null
+          cod_available?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          discount?: number | null
+          fabric_type: string
+          id?: string
+          images?: string[] | null
+          in_stock?: boolean | null
+          name: string
+          price: number
+          rating?: number | null
+          review_count?: number | null
+          tags?: string[] | null
+          upi_enabled?: boolean | null
+          weaver_id: string
+        }
+        Update: {
+          card_enabled?: boolean | null
+          cod_available?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          discount?: number | null
+          fabric_type?: string
+          id?: string
+          images?: string[] | null
+          in_stock?: boolean | null
+          name?: string
+          price?: number
+          rating?: number | null
+          review_count?: number | null
+          tags?: string[] | null
+          upi_enabled?: boolean | null
+          weaver_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          is_verified: boolean | null
+          name: string | null
+          role: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          email?: string | null
+          id: string
+          is_verified?: boolean | null
+          name?: string | null
+          role: string
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_verified?: boolean | null
+          name?: string | null
+          role?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

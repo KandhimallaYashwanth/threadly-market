@@ -12,17 +12,18 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import ConversationsList from '@/components/dashboard/ConversationsList';
 import ChatSection from '@/components/dashboard/ChatSection';
-import { UserRole, OrderStatus, User as UserType, DEFAULT_USERS } from '@/lib/types';
+import { OrderStatus, User as UserType, UserRole } from '@/lib/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
+import ProfileForm from '@/components/profile/ProfileForm';
+import { useSupabaseQuery } from '@/hooks/useSupabaseQuery';
 
-// Mock order data
+// Mock order data (will be replaced with real data from Supabase later)
 const mockOrders = [
   {
     id: 'ord-001',
@@ -54,11 +55,20 @@ const CustomerDashboard = () => {
   const tabFromQuery = queryParams.get('tab');
   const weaverIdFromQuery = queryParams.get('weaver');
   
+  const { user, signOut } = useAuth();
+  
   const [activeTab, setActiveTab] = useState(tabFromQuery || 'orders');
-  const [user, setUser] = useState<UserType | null>(null);
-  const [loading, setLoading] = useState(true);
   const [selectedWeaver, setSelectedWeaver] = useState<UserType | null>(null);
   const [orders, setOrders] = useState(mockOrders);
+  
+  // Fetch weavers from Supabase
+  const { data: weavers, isLoading: weaversLoading } = useSupabaseQuery<UserType[]>(
+    ['weavers'],
+    'profiles',
+    {
+      filters: { role: UserRole.WEAVER }
+    }
+  );
 
   // Get status color based on order status
   const getStatusColor = (status: OrderStatus) => {
@@ -107,53 +117,16 @@ const CustomerDashboard = () => {
     }
     
     // Try to find weaver from query parameter
-    if (weaverIdFromQuery) {
-      const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
-      const foundWeaver = allUsers.find((u: UserType) => u.id === weaverIdFromQuery && u.role === UserRole.WEAVER);
+    if (weaverIdFromQuery && weavers) {
+      const foundWeaver = weavers.find((w) => w.id === weaverIdFromQuery);
       if (foundWeaver) {
         setSelectedWeaver(foundWeaver);
       }
     }
-    
-    // Load orders from localStorage
-    const storedOrders = localStorage.getItem('orders');
-    if (storedOrders) {
-      try {
-        setOrders(JSON.parse(storedOrders));
-      } catch (error) {
-        console.error('Error loading orders:', error);
-      }
-    }
-    
-    // Check if user is logged in
-    const storedUser = localStorage.getItem('user');
-    
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      
-      // Verify user role
-      if (parsedUser.role !== UserRole.CUSTOMER && parsedUser.role !== UserRole.ADMIN) {
-        toast.error("Unauthorized access", {
-          description: "This dashboard is for customers only."
-        });
-        navigate('/auth');
-      } else {
-        setUser(parsedUser);
-      }
-    } else {
-      // Redirect to login if not logged in
-      toast.error("Authentication required", {
-        description: "Please log in to access your dashboard."
-      });
-      navigate('/auth', { state: { from: '/dashboard/customer', reason: 'auth-required' } });
-    }
-    
-    setLoading(false);
-  }, [navigate, location.search, tabFromQuery, weaverIdFromQuery]);
+  }, [tabFromQuery, weaverIdFromQuery, weavers]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    toast.success("Logged out successfully");
+  const handleLogout = async () => {
+    await signOut();
     navigate('/');
   };
   
@@ -171,8 +144,8 @@ const CustomerDashboard = () => {
     }
   };
 
-  // If loading or no user, show loading state
-  if (loading || !user) {
+  // If no user, redirect to login
+  if (!user) {
     return (
       <>
         <Navbar />
@@ -357,43 +330,7 @@ const CustomerDashboard = () => {
                     <CardDescription>Manage your personal information</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-                        <Avatar className="w-20 h-20">
-                          <AvatarImage src={user.avatar || "https://images.unsplash.com/photo-1494790108377-be9c29b29330"} />
-                          <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <h3 className="text-xl font-semibold">{user.name}</h3>
-                          <p className="text-muted-foreground">{user.email}</p>
-                          <p className="text-sm text-muted-foreground">Member since {formatDate(user.createdAt)}</p>
-                        </div>
-                      </div>
-                      
-                      <div className="grid gap-4 mt-6">
-                        <div>
-                          <label className="text-sm font-medium">Display Name</label>
-                          <Input defaultValue={user.name} className="mt-1" />
-                        </div>
-                        
-                        <div>
-                          <label className="text-sm font-medium">Email Address</label>
-                          <Input defaultValue={user.email} className="mt-1" />
-                        </div>
-                        
-                        <div>
-                          <label className="text-sm font-medium">Shipping Address</label>
-                          <Input placeholder="Enter your address" className="mt-1" />
-                        </div>
-                        
-                        <div>
-                          <label className="text-sm font-medium">Phone Number</label>
-                          <Input placeholder="Enter your phone number" className="mt-1" />
-                        </div>
-                        
-                        <Button className="w-full md:w-auto mt-4">Save Changes</Button>
-                      </div>
-                    </div>
+                    <ProfileForm />
                   </CardContent>
                 </Card>
               )}
@@ -460,15 +397,15 @@ const CustomerDashboard = () => {
                         <div className="space-y-4">
                           <div>
                             <label className="text-sm font-medium">Current Password</label>
-                            <Input type="password" className="mt-1" />
+                            <input type="password" className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md" />
                           </div>
                           <div>
                             <label className="text-sm font-medium">New Password</label>
-                            <Input type="password" className="mt-1" />
+                            <input type="password" className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md" />
                           </div>
                           <div>
                             <label className="text-sm font-medium">Confirm New Password</label>
-                            <Input type="password" className="mt-1" />
+                            <input type="password" className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md" />
                           </div>
                           <Button>Update Password</Button>
                         </div>
