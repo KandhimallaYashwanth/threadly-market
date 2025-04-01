@@ -1,4 +1,3 @@
-
 import { FabricType, OrderStatus, Product, User, UserRole } from './types';
 
 // Re-export the types so they can be imported from data.ts as well
@@ -65,7 +64,10 @@ export const products: Product[] = [
     rating: 4.8,
     reviewCount: 24,
     tags: ['saree', 'wedding', 'traditional', 'premium'],
-    createdAt: new Date('2023-01-15')
+    createdAt: new Date('2023-01-15'),
+    codAvailable: true,
+    upiEnabled: true,
+    cardEnabled: true
   },
   {
     id: 'p2',
@@ -83,7 +85,10 @@ export const products: Product[] = [
     rating: 4.6,
     reviewCount: 18,
     tags: ['cotton', 'dress', 'sustainable', 'casual'],
-    createdAt: new Date('2023-02-10')
+    createdAt: new Date('2023-02-10'),
+    codAvailable: true,
+    upiEnabled: true,
+    cardEnabled: true
   },
   {
     id: 'p3',
@@ -100,7 +105,10 @@ export const products: Product[] = [
     rating: 4.9,
     reviewCount: 32,
     tags: ['home', 'table', 'eco-friendly', 'decor'],
-    createdAt: new Date('2023-03-05')
+    createdAt: new Date('2023-03-05'),
+    codAvailable: false,
+    upiEnabled: true,
+    cardEnabled: true
   },
   {
     id: 'p4',
@@ -118,7 +126,10 @@ export const products: Product[] = [
     rating: 4.7,
     reviewCount: 15,
     tags: ['winter', 'accessory', 'traditional', 'gift'],
-    createdAt: new Date('2023-04-20')
+    createdAt: new Date('2023-04-20'),
+    codAvailable: false,
+    upiEnabled: false,
+    cardEnabled: true
   },
   {
     id: 'p5',
@@ -135,7 +146,10 @@ export const products: Product[] = [
     rating: 4.5,
     reviewCount: 9,
     tags: ['accessory', 'formal', 'gift', 'lightweight'],
-    createdAt: new Date('2023-05-10')
+    createdAt: new Date('2023-05-10'),
+    codAvailable: true,
+    upiEnabled: true,
+    cardEnabled: true
   },
   {
     id: 'p6',
@@ -153,7 +167,10 @@ export const products: Product[] = [
     rating: 4.4,
     reviewCount: 12,
     tags: ['men', 'organic', 'sustainable', 'casual'],
-    createdAt: new Date('2023-06-15')
+    createdAt: new Date('2023-06-15'),
+    codAvailable: true,
+    upiEnabled: true,
+    cardEnabled: true
   },
   {
     id: 'p7',
@@ -170,7 +187,10 @@ export const products: Product[] = [
     rating: 4.8,
     reviewCount: 7,
     tags: ['home', 'decor', 'wall', 'eco-friendly'],
-    createdAt: new Date('2023-07-20')
+    createdAt: new Date('2023-07-20'),
+    codAvailable: false,
+    upiEnabled: true,
+    cardEnabled: true
   },
   {
     id: 'p8',
@@ -187,7 +207,10 @@ export const products: Product[] = [
     rating: 4.6,
     reviewCount: 14,
     tags: ['accessory', 'winter', 'premium', 'gift'],
-    createdAt: new Date('2023-08-10')
+    createdAt: new Date('2023-08-10'),
+    codAvailable: true,
+    upiEnabled: true,
+    cardEnabled: true
   }
 ];
 
