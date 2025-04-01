@@ -40,6 +40,8 @@ export interface Product {
   reviewCount?: number;
   tags: string[];
   createdAt: Date;
+  codAvailable?: boolean;
+  upiEnabled?: boolean;
 }
 
 export enum OrderStatus {
@@ -65,6 +67,7 @@ export interface Order {
   items: OrderItem[];
   status: OrderStatus;
   total: number;
+  paymentMethod?: string;
   createdAt: Date;
   updatedAt: Date;
 }

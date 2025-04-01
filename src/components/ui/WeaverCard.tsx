@@ -5,6 +5,7 @@ import { Star } from 'lucide-react';
 import { User } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface WeaverCardProps {
   weaver: User;
@@ -22,9 +23,17 @@ const WeaverCard = ({ weaver, productCount = 0, averageRating = 0, className, st
     // Check if user is logged in from localStorage
     const user = localStorage.getItem('user');
     if (!user) {
+      toast("Please sign in to send messages");
       navigate('/auth');
       return;
     }
+    
+    const userData = JSON.parse(user);
+    if (userData.role === 'weaver') {
+      toast("Weavers cannot message other weavers");
+      return;
+    }
+    
     // Redirect to dashboard with chat section opened for this weaver
     navigate(`/dashboard/customer?tab=messages&weaver=${weaver.id}`);
   };

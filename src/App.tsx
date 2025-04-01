@@ -3,7 +3,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import Index from "@/pages/Index";
 import Products from "@/pages/Products";
 import ProductDetail from "@/pages/ProductDetail";
@@ -18,8 +19,40 @@ import CustomerDashboard from "@/pages/dashboard/CustomerDashboard";
 import WeaverDashboard from "@/pages/dashboard/WeaverDashboard";
 import Cart from "@/pages/Cart";
 import NotFound from "@/pages/NotFound";
+import { User, UserRole } from "./lib/types";
 
 const queryClient = new QueryClient();
+
+// Protected route component for role-based access control
+const ProtectedRoute = ({ children, allowedRoles }: { children: JSX.Element, allowedRoles: UserRole[] }) => {
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkAuth = () => {
+      const userData = localStorage.getItem('user');
+      if (!userData) {
+        setIsAuthorized(false);
+        return;
+      }
+
+      try {
+        const user: User = JSON.parse(userData);
+        setIsAuthorized(allowedRoles.includes(user.role));
+      } catch (error) {
+        setIsAuthorized(false);
+      }
+    };
+
+    checkAuth();
+  }, [allowedRoles]);
+
+  if (isAuthorized === null) {
+    // Still loading
+    return <div>Loading...</div>;
+  }
+
+  return isAuthorized ? children : <Navigate to="/auth" replace />;
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -38,8 +71,22 @@ const App = () => (
           <Route path="/chat/:id" element={<Chat />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/dashboard/customer" element={<CustomerDashboard />} />
-          <Route path="/dashboard/weaver" element={<WeaverDashboard />} />
+          <Route 
+            path="/dashboard/customer" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.CUSTOMER, UserRole.ADMIN]}>
+                <CustomerDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/weaver" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.WEAVER, UserRole.ADMIN]}>
+                <WeaverDashboard />
+              </ProtectedRoute>
+            } 
+          />
           <Route path="/cart" element={<Cart />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

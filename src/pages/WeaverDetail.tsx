@@ -33,11 +33,23 @@ const WeaverDetail = () => {
     // Check if user is logged in from localStorage
     const user = localStorage.getItem('user');
     if (!user) {
+      toast("Please sign in to send messages");
       navigate('/auth');
       return;
     }
+    
+    const userData = JSON.parse(user);
+    if (userData.role === 'weaver') {
+      toast("Weavers cannot message other weavers");
+      return;
+    }
+    
     // Redirect to dashboard with chat section opened for this weaver
     navigate(`/dashboard/customer?tab=messages&weaver=${id}`);
+  };
+  
+  const handleApplyToJoin = () => {
+    navigate('/auth?signup=weaver');
   };
   
   // Handle if weaver not found
@@ -147,6 +159,9 @@ const WeaverDetail = () => {
                   <Button variant="outline" onClick={handleShare} className="gap-2">
                     <Share2 className="h-4 w-4" />
                     Share
+                  </Button>
+                  <Button variant="secondary" onClick={handleApplyToJoin} className="gap-2 ml-auto">
+                    Apply to Join
                   </Button>
                 </div>
               </div>
