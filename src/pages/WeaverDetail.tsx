@@ -5,7 +5,7 @@ import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { weavers, products } from '@/lib/data';
 import { Button } from '@/components/ui/button';
-import { BadgeCheck, ArrowLeft, MessageSquare, Share2, Star } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Share2, Star } from 'lucide-react';
 import ProductCard from '@/components/ui/ProductCard';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -28,6 +28,17 @@ const WeaverDetail = () => {
   const averageRating = ratings.length 
     ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length 
     : 0;
+  
+  const handleMessageClick = () => {
+    // Check if user is logged in from localStorage
+    const user = localStorage.getItem('user');
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+    // Redirect to dashboard with chat section opened for this weaver
+    navigate(`/dashboard/customer?tab=messages&weaver=${id}`);
+  };
   
   // Handle if weaver not found
   if (!weaver) {
@@ -90,11 +101,6 @@ const WeaverDetail = () => {
                   alt={weaver.name} 
                   className="w-full aspect-square object-cover rounded-xl"
                 />
-                {weaver.isVerified && (
-                  <span className="absolute -bottom-4 -right-4 bg-primary rounded-full p-2">
-                    <BadgeCheck className="w-6 h-6 text-primary-foreground" />
-                  </span>
-                )}
               </div>
             </div>
             
@@ -103,11 +109,6 @@ const WeaverDetail = () => {
                 <div>
                   <div className="flex items-center flex-wrap gap-3">
                     <h1 className="text-3xl font-medium">{weaver.name}</h1>
-                    {weaver.isVerified && (
-                      <span className="text-sm bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
-                        Verified Artisan
-                      </span>
-                    )}
                   </div>
                   
                   <div className="flex items-center mt-3 text-muted-foreground">
@@ -139,7 +140,7 @@ const WeaverDetail = () => {
                 </div>
                 
                 <div className="flex flex-wrap gap-3 mt-8">
-                  <Button onClick={() => navigate(`/chat/${weaver.id}`)} className="gap-2">
+                  <Button onClick={handleMessageClick} className="gap-2">
                     <MessageSquare className="h-4 w-4" />
                     Message
                   </Button>

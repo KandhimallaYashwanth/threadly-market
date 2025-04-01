@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
@@ -19,6 +18,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
+import ThreadlyLogo from '@/components/ui/ThreadlyLogo';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -30,10 +30,8 @@ const Navbar = () => {
   const [cartCount, setCartCount] = useState(0);
   const [user, setUser] = useState<any>(null);
 
-  // Check if we're on the homepage
   const isHomePage = location.pathname === '/';
 
-  // Handle scroll event to change navbar appearance
   useEffect(() => {
     const handleScroll = () => {
       const offset = window.scrollY;
@@ -44,7 +42,6 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Check for user authentication status
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
@@ -54,7 +51,6 @@ const Navbar = () => {
     }
   }, [location.pathname]);
 
-  // Check for cart items in localStorage
   useEffect(() => {
     const getCartItems = () => {
       const cart = JSON.parse(localStorage.getItem('cart') || '[]');
@@ -64,7 +60,6 @@ const Navbar = () => {
     getCartItems();
     window.addEventListener('storage', getCartItems);
     
-    // Custom event for cart updates
     window.addEventListener('cartUpdated', getCartItems);
     
     return () => {
@@ -105,7 +100,6 @@ const Navbar = () => {
       return;
     }
     
-    // Direct to appropriate dashboard based on role
     if (user.role === UserRole.WEAVER) {
       navigate('/dashboard/weaver');
     } else {
@@ -131,15 +125,13 @@ const Navbar = () => {
     >
       <div className="container mx-auto px-4 md:px-6">
         <div className="flex items-center justify-between">
-          {/* Logo */}
           <Link 
             to="/" 
-            className="text-2xl font-medium tracking-tight transition-opacity hover:opacity-80"
+            className="transition-opacity hover:opacity-80"
           >
-            Thread<span className="text-primary">ly</span>
+            <ThreadlyLogo />
           </Link>
 
-          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-2">
             {navLinks.map((link) => (
               <Link
@@ -158,7 +150,6 @@ const Navbar = () => {
             ))}
           </div>
 
-          {/* Search */}
           <div className="hidden md:block relative flex-1 max-w-md mx-6">
             <form onSubmit={handleSearch}>
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -169,7 +160,6 @@ const Navbar = () => {
             </form>
           </div>
 
-          {/* Action Buttons */}
           <div className="hidden md:flex items-center space-x-1">
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="w-5 h-5" />
@@ -233,7 +223,6 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center">
             <Button variant="ghost" size="icon" onClick={toggleMobileMenu}>
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -241,7 +230,6 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* Mobile Menu */}
         {isMobile && mobileMenuOpen && (
           <div className="md:hidden animate-slide-down">
             <div className="pt-4 pb-3 space-y-1">

@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { BadgeCheck, Star } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Star } from 'lucide-react';
 import { User } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -15,6 +15,20 @@ interface WeaverCardProps {
 }
 
 const WeaverCard = ({ weaver, productCount = 0, averageRating = 0, className, style }: WeaverCardProps) => {
+  const navigate = useNavigate();
+  
+  const handleMessageClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    // Check if user is logged in from localStorage
+    const user = localStorage.getItem('user');
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+    // Redirect to dashboard with chat section opened for this weaver
+    navigate(`/dashboard/customer?tab=messages&weaver=${weaver.id}`);
+  };
+  
   return (
     <div 
       className={cn(
@@ -30,18 +44,12 @@ const WeaverCard = ({ weaver, productCount = 0, averageRating = 0, className, st
             alt={weaver.name} 
             className="w-20 h-20 rounded-lg object-cover"
           />
-          {weaver.isVerified && (
-            <span className="absolute -bottom-2 -right-2 bg-primary rounded-full p-1">
-              <BadgeCheck className="w-4 h-4 text-primary-foreground" />
-            </span>
-          )}
         </div>
         <div className="flex-1">
           <div className="flex items-center">
             <Link to={`/weavers/${weaver.id}`}>
               <h3 className="font-medium text-lg hover:text-primary/80 transition-colors">{weaver.name}</h3>
             </Link>
-            {weaver.isVerified && <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Verified Artisan</span>}
           </div>
           
           <div className="mt-1 flex items-center text-sm">
@@ -65,8 +73,8 @@ const WeaverCard = ({ weaver, productCount = 0, averageRating = 0, className, st
         <Button asChild size="sm" variant="outline" className="flex-1">
           <Link to={`/weavers/${weaver.id}`}>View Profile</Link>
         </Button>
-        <Button asChild size="sm" className="flex-1">
-          <Link to={`/chat/${weaver.id}`}>Message</Link>
+        <Button size="sm" className="flex-1" onClick={handleMessageClick}>
+          Message
         </Button>
       </div>
     </div>
