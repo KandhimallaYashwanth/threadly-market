@@ -82,27 +82,33 @@ const Auth = () => {
     }
   }, [redirectReason]);
 
-  // Separate useEffect for handling navigation after authentication
+  // Enhanced redirection effect with improved logging and role handling
   useEffect(() => {
-    // Only redirect if user exists and redirect hasn't been triggered yet
     if (user && !redirectTriggered) {
+      console.log("Detected authenticated user:", user);
       setRedirectTriggered(true);
       
-      console.log("Redirecting authenticated user:", user.role);
+      // Clear any form validation errors
+      loginForm.reset();
+      registerForm.reset();
       
-      if (user.role === UserRole.WEAVER) {
-        navigate('/dashboard/weaver', { replace: true });
-      } else if (user.role === UserRole.CUSTOMER) {
-        navigate('/dashboard/customer', { replace: true });
-      } else if (user.role === UserRole.ADMIN) {
-        // If there's an admin dashboard in the future
-        navigate('/dashboard/admin', { replace: true });
-      } else {
-        // Default fallback
-        navigate(from === '/auth' ? '/' : from, { replace: true });
-      }
+      // Navigate based on user role with a slight delay to allow toast to be seen
+      setTimeout(() => {
+        console.log("Redirecting user based on role:", user.role);
+        
+        if (user.role === UserRole.WEAVER) {
+          navigate('/dashboard/weaver', { replace: true });
+        } else if (user.role === UserRole.CUSTOMER) {
+          navigate('/dashboard/customer', { replace: true });
+        } else if (user.role === UserRole.ADMIN) {
+          navigate('/dashboard/admin', { replace: true });
+        } else {
+          // Default fallback
+          navigate(from === '/auth' ? '/' : from, { replace: true });
+        }
+      }, 800); // Short delay to see the toast
     }
-  }, [user, navigate, from, redirectTriggered]);
+  }, [user, navigate, from, redirectTriggered, loginForm, registerForm]);
   
   // Update role in form when account type changes
   useEffect(() => {
@@ -111,8 +117,9 @@ const Auth = () => {
   
   const handleLogin = async (values: z.infer<typeof loginSchema>) => {
     try {
+      console.log("Attempting login with:", values.email);
       await signIn(values.email, values.password);
-      // No need to manually redirect here, the useEffect will handle it
+      // Redirection handled by useEffect
     } catch (error) {
       console.error("Login error:", error);
     }
@@ -120,6 +127,7 @@ const Auth = () => {
   
   const handleRegister = async (values: z.infer<typeof registerSchema>) => {
     try {
+      console.log("Attempting registration with:", values.email, "as", values.role);
       await signUp(
         values.email, 
         values.password, 
@@ -127,7 +135,7 @@ const Auth = () => {
         values.role as UserRole.CUSTOMER | UserRole.WEAVER,
         values.bio
       );
-      // No need to manually redirect here, the useEffect will handle it
+      // Redirection handled by useEffect
     } catch (error) {
       console.error("Registration error:", error);
     }

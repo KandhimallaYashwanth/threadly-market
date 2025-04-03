@@ -119,6 +119,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             role,
             bio
           },
+          emailRedirectTo: undefined,
         },
       });
       
