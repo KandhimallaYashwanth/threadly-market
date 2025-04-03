@@ -3,14 +3,20 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { PostgrestError } from '@supabase/supabase-js';
+import { Database } from '@/integrations/supabase/types';
 
 // Define valid table names to ensure type safety
-type TableName = 'products' | 'profiles';
+type TableName = keyof Database['public']['Tables'];
+
+// Type helpers for table rows
+type TableRow<T extends TableName> = Database['public']['Tables'][T]['Row'];
+type InsertRow<T extends TableName> = Database['public']['Tables'][T]['Insert'];
+type UpdateRow<T extends TableName> = Database['public']['Tables'][T]['Update'];
 
 // Generic hook for fetching data from Supabase
-export function useSupabaseQuery<T>(
+export function useSupabaseQuery<T extends TableName, R = TableRow<T>>(
   queryKey: string[],
-  tableName: TableName,
+  tableName: T,
   options: {
     columns?: string;
     filters?: Record<string, any>;
@@ -55,21 +61,21 @@ export function useSupabaseQuery<T>(
       if (options.single) {
         const { data, error } = await query.single();
         if (error) throw error;
-        return data as T;
+        return data as R;
       } else {
         const { data, error } = await query;
         if (error) throw error;
-        return data as T[];
+        return data as R[];
       }
     },
   });
 }
 
 // Hook for inserting data into Supabase
-export function useSupabaseInsert<T>(
-  tableName: TableName,
+export function useSupabaseInsert<T extends TableName, R = TableRow<T>>(
+  tableName: T,
   options: {
-    onSuccess?: (data: T) => void;
+    onSuccess?: (data: R) => void;
     onError?: (error: Error) => void;
     invalidateQueries?: string[];
   } = {}
@@ -77,15 +83,15 @@ export function useSupabaseInsert<T>(
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (newData: Record<string, any>) => {
+    mutationFn: async (newData: InsertRow<T>) => {
       const { data, error } = await supabase
         .from(tableName)
-        .insert(newData)
+        .insert(newData as any) // Use type assertion here to avoid complex type issues
         .select()
         .single();
       
       if (error) throw error;
-      return data as T;
+      return data as R;
     },
     onSuccess: (data) => {
       if (options.invalidateQueries) {
@@ -113,10 +119,10 @@ export function useSupabaseInsert<T>(
 }
 
 // Hook for updating data in Supabase
-export function useSupabaseUpdate<T>(
-  tableName: TableName,
+export function useSupabaseUpdate<T extends TableName, R = TableRow<T>>(
+  tableName: T,
   options: {
-    onSuccess?: (data: T) => void;
+    onSuccess?: (data: R) => void;
     onError?: (error: Error) => void;
     invalidateQueries?: string[];
     column?: string; // Column to match on, default is "id"
@@ -131,17 +137,17 @@ export function useSupabaseUpdate<T>(
       data 
     }: { 
       id: string; 
-      data: Record<string, any>
+      data: Partial<UpdateRow<T>>
     }) => {
       const { data: updatedData, error } = await supabase
         .from(tableName)
-        .update(data)
+        .update(data as any) // Use type assertion to avoid complex type issues
         .eq(column, id)
         .select()
         .single();
       
       if (error) throw error;
-      return updatedData as T;
+      return updatedData as R;
     },
     onSuccess: (data) => {
       if (options.invalidateQueries) {
@@ -169,8 +175,8 @@ export function useSupabaseUpdate<T>(
 }
 
 // Hook for deleting data from Supabase
-export function useSupabaseDelete(
-  tableName: TableName,
+export function useSupabaseDelete<T extends TableName>(
+  tableName: T,
   options: {
     onSuccess?: () => void;
     onError?: (error: Error) => void;
