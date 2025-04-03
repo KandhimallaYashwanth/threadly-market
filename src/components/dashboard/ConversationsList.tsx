@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
-import { User, Message, DEFAULT_USERS } from '@/lib/types';
+import { User, Message } from '@/lib/types';
 
 interface ConversationsListProps {
   currentUser: User;
@@ -24,27 +23,21 @@ const ConversationsList = ({ currentUser, onSelectWeaver, selectedWeaverId }: Co
 
   useEffect(() => {
     const loadConversations = () => {
-      // Get all weavers from localStorage
       const users = JSON.parse(localStorage.getItem('users') || '[]');
       const weavers = users.filter((user: User) => user.role === 'weaver');
       
-      // Get all messages from localStorage
       const messages: Message[] = JSON.parse(localStorage.getItem('messages') || '[]');
       
-      // Group messages by weaver
       const weaverConversations: ConversationSummary[] = weavers.map((weaver: User) => {
-        // Get messages between current user and this weaver
         const weaverMessages = messages.filter(msg => 
           (msg.senderId === currentUser.id && msg.receiverId === weaver.id) ||
           (msg.senderId === weaver.id && msg.receiverId === currentUser.id)
         );
         
-        // Sort by date
         weaverMessages.sort((a, b) => 
           new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         );
         
-        // Count unread messages
         const unreadCount = weaverMessages.filter(
           msg => msg.senderId === weaver.id && !msg.isRead
         ).length;
@@ -56,7 +49,6 @@ const ConversationsList = ({ currentUser, onSelectWeaver, selectedWeaverId }: Co
         };
       });
       
-      // Sort by last message date (most recent first) and push conversations with no messages to the end
       weaverConversations.sort((a, b) => {
         if (!a.lastMessage && !b.lastMessage) return 0;
         if (!a.lastMessage) return 1;
@@ -72,12 +64,10 @@ const ConversationsList = ({ currentUser, onSelectWeaver, selectedWeaverId }: Co
     loadConversations();
   }, [currentUser]);
   
-  // Filter conversations based on search query
   const filteredConversations = conversations.filter(
     conv => conv.weaver.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
-  // Format time for last message
   const formatMessageTime = (date: Date) => {
     const messageDate = new Date(date);
     const now = new Date();
@@ -124,7 +114,7 @@ const ConversationsList = ({ currentUser, onSelectWeaver, selectedWeaverId }: Co
               onClick={() => onSelectWeaver(conversation.weaver)}
             >
               <Avatar>
-                <AvatarImage src={conversation.weaver.avatar} />
+                <AvatarImage src={conversation.weaver.avatar_url || conversation.weaver.avatar} />
                 <AvatarFallback>{conversation.weaver.name.charAt(0)}</AvatarFallback>
               </Avatar>
               

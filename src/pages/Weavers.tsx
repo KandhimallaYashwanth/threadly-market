@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
@@ -11,34 +10,94 @@ import { useSupabaseQuery } from '@/hooks/useSupabaseQuery';
 import { useRealtimeSubscription } from '@/hooks/useSupabaseQuery';
 import { supabase } from '@/integrations/supabase/client';
 
+// Extended user interface for weaver with stats
+interface WeaverWithStats extends User {
+  productCount: number;
+  averageRating: number;
+}
+
 const Weavers = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [weavers, setWeavers] = useState<User[]>([]);
+  const [weavers, setWeavers] = useState<WeaverWithStats[]>([]);
   
-  // Fetch weavers from Supabase
-  const { data: fetchedWeavers, isLoading } = useSupabaseQuery<User[]>(
-    ['weavers'],
-    'profiles',
-    {
-      filters: { role: UserRole.WEAVER }
-    }
-  );
+  // Fetch weavers from Supabase using a direct query instead of useSupabaseQuery
+  useEffect(() => {
+    const fetchWeavers = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('role', UserRole.WEAVER);
+          
+        if (error) throw error;
+        
+        if (data) {
+          // Convert data to User objects
+          const mappedWeavers = data.map(mapSupabaseProfileToUser);
+          
+          // Enrich weavers with product stats
+          const weaversWithStats = await fetchWeaverStats(mappedWeavers);
+          setWeavers(weaversWithStats);
+        }
+      } catch (error) {
+        console.error('Error fetching weavers:', error);
+      }
+    };
+    
+    fetchWeavers();
+  }, []);
   
   // Setup realtime subscription for weaver profiles
-  const { setupSubscription } = useRealtimeSubscription('profiles', ['INSERT', 'UPDATE'], (payload) => {
-    if (payload.new && payload.new.role === UserRole.WEAVER) {
-      // If it's a new weaver, add them to the list
-      if (payload.eventType === 'INSERT') {
-        setWeavers(prev => [...prev, mapSupabaseProfileToUser(payload.new)]);
-      }
-      // If it's an update, update the existing weaver
-      else if (payload.eventType === 'UPDATE') {
-        setWeavers(prev => 
-          prev.map(w => w.id === payload.new.id ? mapSupabaseProfileToUser(payload.new) : w)
-        );
-      }
-    }
-  });
+  useEffect(() => {
+    const channel = supabase
+      .channel('public:profiles')
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'profiles',
+        filter: `role=eq.${UserRole.WEAVER}`
+      }, (payload) => {
+        // If it's a new weaver, add them to the list
+        if (payload.new) {
+          const newWeaver = mapSupabaseProfileToUser(payload.new as any);
+          
+          // Fetch stats for the new weaver
+          fetchWeaverStats([newWeaver]).then(enrichedWeavers => {
+            setWeavers(prev => [...prev, enrichedWeavers[0]]);
+          });
+        }
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'profiles',
+        filter: `role=eq.${UserRole.WEAVER}`
+      }, (payload) => {
+        // If a weaver is updated, update them in the list
+        if (payload.new) {
+          const updatedWeaver = mapSupabaseProfileToUser(payload.new as any);
+          
+          setWeavers(prev => 
+            prev.map(w => {
+              if (w.id === updatedWeaver.id) {
+                // Preserve stats when updating
+                return { 
+                  ...updatedWeaver, 
+                  productCount: w.productCount, 
+                  averageRating: w.averageRating 
+                };
+              }
+              return w;
+            })
+          );
+        }
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
   
   // Helper function to map Supabase profile to User type
   const mapSupabaseProfileToUser = (profile: any): User => {
@@ -55,7 +114,7 @@ const Weavers = () => {
   };
   
   // Fetch products for each weaver to get product counts and average ratings
-  const fetchWeaverStats = async (weavers: User[]) => {
+  const fetchWeaverStats = async (weavers: User[]): Promise<WeaverWithStats[]> => {
     if (!weavers || weavers.length === 0) return [];
     
     // Create a map of weaver IDs to their stats
@@ -66,27 +125,30 @@ const Weavers = () => {
       weaverStats.set(weaver.id, { productCount: 0, totalRating: 0, ratingCount: 0 });
     });
     
-    // Fetch all products
-    const { data: products, error } = await supabase
-      .from('products')
-      .select('weaver_id, rating');
-    
-    if (error) {
-      console.error('Error fetching products:', error);
-      return weavers;
-    }
-    
-    // Calculate stats for each weaver
-    products.forEach((product: any) => {
-      const stats = weaverStats.get(product.weaver_id);
-      if (stats) {
-        stats.productCount += 1;
-        if (product.rating) {
-          stats.totalRating += product.rating;
-          stats.ratingCount += 1;
-        }
+    try {
+      // Fetch all products
+      const { data: products, error } = await supabase
+        .from('products')
+        .select('weaver_id, rating');
+      
+      if (error) throw error;
+      
+      if (products) {
+        // Calculate stats for each weaver
+        products.forEach((product: any) => {
+          const stats = weaverStats.get(product.weaver_id);
+          if (stats) {
+            stats.productCount += 1;
+            if (product.rating) {
+              stats.totalRating += product.rating;
+              stats.ratingCount += 1;
+            }
+          }
+        });
       }
-    });
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    }
     
     // Add stats to weavers
     return weavers.map(weaver => {
@@ -102,23 +164,6 @@ const Weavers = () => {
       };
     });
   };
-  
-  useEffect(() => {
-    // Set up realtime subscription
-    const cleanup = setupSubscription();
-    
-    // Fetch products for each weaver when the list changes
-    if (fetchedWeavers) {
-      const enrichWeavers = async () => {
-        const weaversWithStats = await fetchWeaverStats(fetchedWeavers);
-        setWeavers(weaversWithStats);
-      };
-      
-      enrichWeavers();
-    }
-    
-    return cleanup;
-  }, [fetchedWeavers, setupSubscription]);
 
   // Filter weavers based on search query
   const filteredWeavers = weavers.filter(weaver => 
@@ -150,30 +195,21 @@ const Weavers = () => {
               />
             </div>
 
-            {/* Loading state */}
-            {isLoading && (
-              <div className="flex justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-              </div>
-            )}
-
             {/* Weavers Grid */}
-            {!isLoading && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {filteredWeavers.map((weaver, index) => (
-                  <WeaverCard
-                    key={weaver.id}
-                    weaver={weaver}
-                    productCount={weaver.productCount || 0}
-                    averageRating={weaver.averageRating || 0}
-                    className="animate-scale-in" 
-                    style={{ animationDelay: `${index * 100}ms` }}
-                  />
-                ))}
-              </div>
-            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {filteredWeavers.map((weaver, index) => (
+                <WeaverCard
+                  key={weaver.id}
+                  weaver={weaver}
+                  productCount={weaver.productCount}
+                  averageRating={weaver.averageRating}
+                  className="animate-scale-in" 
+                  style={{ animationDelay: `${index * 100}ms` }}
+                />
+              ))}
+            </div>
 
-            {!isLoading && filteredWeavers.length === 0 && (
+            {filteredWeavers.length === 0 && (
               <div className="text-center py-12">
                 <h3 className="text-xl mb-2">No weavers found</h3>
                 <p className="text-muted-foreground mb-4">Try adjusting your search criteria</p>

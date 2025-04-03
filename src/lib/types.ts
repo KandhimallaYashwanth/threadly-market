@@ -11,9 +11,14 @@ export interface User {
   email: string;
   role: UserRole;
   avatar_url?: string;
+  // Adding avatar for backward compatibility with existing code
+  avatar?: string;
   bio?: string;
   isVerified?: boolean;
   createdAt: Date;
+  // Add these for extended functionality in components
+  productCount?: number;
+  averageRating?: number;
 }
 
 export enum FabricType {
@@ -105,5 +110,3 @@ export interface Conversation {
   lastMessage?: Message;
   updatedAt: Date;
 }
-
-// The default users are now removed as we're using Supabase for authentication
