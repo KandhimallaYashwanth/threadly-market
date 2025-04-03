@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { User, UserRole, Order, OrderStatus, PaymentMethod } from '@/lib/types';
@@ -72,6 +73,7 @@ const CustomerDashboard = () => {
       try {
         setLoading(true);
         
+        // Fix the orders query - use raw SQL for now since the types don't match
         const { data, error } = await supabase
           .from('orders')
           .select(`

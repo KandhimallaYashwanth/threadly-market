@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
@@ -23,12 +22,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Convert Supabase User to our User type
   const mapSupabaseUser = async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
     if (!supabaseUser) return null;
     
     try {
-      // Fetch the user's profile from our profiles table
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
@@ -57,12 +54,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   useEffect(() => {
-    // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         setSession(currentSession);
         
-        // Use setTimeout to prevent Supabase auth deadlock
         setTimeout(async () => {
           if (currentSession?.user) {
             const mappedUser = await mapSupabaseUser(currentSession.user);
@@ -75,7 +70,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     );
 
-    // Then check for existing session
     supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
       setSession(currentSession);
       
@@ -116,7 +110,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       setLoading(true);
       
-      // Register with Supabase Auth
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -178,7 +171,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       if (error) throw error;
       
-      // Update the local user state
       setUser({ ...user, ...updates });
       
       toast.success("Profile updated successfully");
@@ -194,10 +186,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       if (!user) throw new Error("Not authenticated");
       
-      // Create a unique file path using the user's ID
       const filePath = `${user.id}/${Date.now()}_${file.name}`;
       
-      // Upload the file to the 'avatars' bucket
       const { error: uploadError, data } = await supabase.storage
         .from('avatars')
         .upload(filePath, file, {
@@ -206,7 +196,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       if (uploadError) throw uploadError;
       
-      // Get the public URL for the uploaded file
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);

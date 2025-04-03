@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlusCircle, ShoppingBag, MessageSquare, Store, Users, Package, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { UserRole, FabricType, Product, Order } from "@/lib/types";
+import { UserRole, FabricType, Product, Order, OrderStatus, PaymentMethod } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import ProfileVisibilityToggle from "@/components/profile/ProfileVisibilityToggle";
@@ -111,6 +112,7 @@ const WeaverDashboard = () => {
     
     const fetchOrders = async () => {
       try {
+        // Fix the query to match the correct types and structure
         const { data, error } = await supabase
           .from('orders')
           .select(`
@@ -132,9 +134,9 @@ const WeaverDashboard = () => {
               quantity: item.quantity,
               price: item.price
             })),
-            status: order.status,
+            status: order.status as OrderStatus,
             total: order.total,
-            paymentMethod: order.payment_method,
+            paymentMethod: order.payment_method as PaymentMethod,
             createdAt: new Date(order.created_at),
             updatedAt: new Date(order.updated_at)
           }));
