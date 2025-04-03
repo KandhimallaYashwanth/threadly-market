@@ -142,7 +142,7 @@ export function useSupabaseUpdate<T extends TableName, R = TableRow<T>>(
       const { data: updatedData, error } = await supabase
         .from(tableName)
         .update(data as any) // Use type assertion to avoid complex type issues
-        .eq(column, id)
+        .eq(column as any, id) // Type assertion to avoid column type issue
         .select()
         .single();
       
@@ -192,7 +192,7 @@ export function useSupabaseDelete<T extends TableName>(
       const { error } = await supabase
         .from(tableName)
         .delete()
-        .eq(column, id);
+        .eq(column as any, id); // Type assertion to avoid column type issue
       
       if (error) throw error;
       return true;

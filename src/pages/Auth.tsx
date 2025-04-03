@@ -91,7 +91,7 @@ const Auth = () => {
   
   // Update role in form when account type changes
   useEffect(() => {
-    registerForm.setValue('role', accountType);
+    registerForm.setValue('role', accountType as UserRole.CUSTOMER | UserRole.WEAVER);
   }, [accountType, registerForm]);
   
   const handleLogin = async (values: z.infer<typeof loginSchema>) => {
