@@ -83,10 +83,10 @@ export function useSupabaseInsert<T extends TableName, R = TableRow<T>>(
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (newData: InsertRow<T>) => {
+    mutationFn: async (newData: any) => { // Changed type to any to avoid complex type issues
       const { data, error } = await supabase
         .from(tableName)
-        .insert(newData as any) // Use type assertion here to avoid complex type issues
+        .insert(newData as any)
         .select()
         .single();
       
@@ -137,11 +137,11 @@ export function useSupabaseUpdate<T extends TableName, R = TableRow<T>>(
       data 
     }: { 
       id: string; 
-      data: Partial<UpdateRow<T>>
+      data: any // Changed to any to avoid complex type issues
     }) => {
       const { data: updatedData, error } = await supabase
         .from(tableName)
-        .update(data as any) // Use type assertion to avoid complex type issues
+        .update(data as any)
         .eq(column as any, id) // Type assertion to avoid column type issue
         .select()
         .single();

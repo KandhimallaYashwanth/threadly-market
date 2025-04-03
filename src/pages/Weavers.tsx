@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
@@ -7,7 +8,6 @@ import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { UserRole, User } from '@/lib/types';
 import { useSupabaseQuery } from '@/hooks/useSupabaseQuery';
-import { useRealtimeSubscription } from '@/hooks/useSupabaseQuery';
 import { supabase } from '@/integrations/supabase/client';
 
 // Extended user interface for weaver with stats
@@ -19,11 +19,13 @@ interface WeaverWithStats extends User {
 const Weavers = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [weavers, setWeavers] = useState<WeaverWithStats[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Fetch weavers from Supabase using a direct query instead of useSupabaseQuery
   useEffect(() => {
     const fetchWeavers = async () => {
       try {
+        setIsLoading(true);
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
@@ -41,6 +43,8 @@ const Weavers = () => {
         }
       } catch (error) {
         console.error('Error fetching weavers:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
     
@@ -209,11 +213,17 @@ const Weavers = () => {
               ))}
             </div>
 
-            {filteredWeavers.length === 0 && (
+            {filteredWeavers.length === 0 && !isLoading && (
               <div className="text-center py-12">
                 <h3 className="text-xl mb-2">No weavers found</h3>
                 <p className="text-muted-foreground mb-4">Try adjusting your search criteria</p>
                 <Button onClick={() => setSearchQuery('')}>Clear Search</Button>
+              </div>
+            )}
+
+            {isLoading && (
+              <div className="text-center py-12">
+                <h3 className="text-xl mb-2">Loading weavers...</h3>
               </div>
             )}
           </div>

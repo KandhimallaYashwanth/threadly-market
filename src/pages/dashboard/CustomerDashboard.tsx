@@ -1,11 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { User, UserRole } from '@/lib/types';
+import { User, UserRole, Order } from '@/lib/types';
 import ConversationsList from '@/components/dashboard/ConversationsList';
 import ChatSection from '@/components/dashboard/ChatSection';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Home, MessageSquare } from 'lucide-react';
+import { Home, MessageSquare, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,6 +20,8 @@ const CustomerDashboard = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('orders');
   const [selectedWeaver, setSelectedWeaver] = useState<User | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
   
   // Update selectedWeaver from URL query param
   useEffect(() => {
@@ -66,6 +68,55 @@ const CustomerDashboard = () => {
       fetchWeaver();
     }
   }, []);
+
+  // Fetch customer orders
+  useEffect(() => {
+    const fetchOrders = async () => {
+      if (!user) return;
+
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('orders')
+          .select(`
+            *,
+            items:order_items(*)
+          `)
+          .eq('customer_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        // Process and set orders
+        if (data) {
+          // Convert to our Order type
+          const processedOrders: Order[] = data.map((order: any) => ({
+            id: order.id,
+            customerId: order.customer_id,
+            weaverId: order.weaver_id,
+            items: order.items.map((item: any) => ({
+              productId: item.product_id,
+              quantity: item.quantity,
+              price: item.price
+            })),
+            status: order.status,
+            total: order.total,
+            paymentMethod: order.payment_method,
+            createdAt: new Date(order.created_at),
+            updatedAt: new Date(order.updated_at)
+          }));
+
+          setOrders(processedOrders);
+        }
+      } catch (error) {
+        console.error('Error fetching orders:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, [user]);
   
   if (!user) {
     return <div>Loading...</div>;
@@ -76,13 +127,13 @@ const CustomerDashboard = () => {
   };
   
   return (
-    <div className="container mx-auto mt-10">
+    <div className="container mx-auto mt-10 px-4 pb-20">
       <h1 className="text-2xl font-bold mb-4">Customer Dashboard</h1>
       
       <Tabs defaultValue={activeTab} className="w-full">
         <TabsList className="bg-secondary rounded-md">
           <TabsTrigger value="orders" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            <Home className="w-4 h-4 mr-2" />
+            <ShoppingBag className="w-4 h-4 mr-2" />
             Orders
           </TabsTrigger>
           <TabsTrigger value="messages" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
@@ -95,17 +146,46 @@ const CustomerDashboard = () => {
           <div className="rounded-md border">
             <div className="p-4">
               <h2 className="text-lg font-semibold mb-2">Your Orders</h2>
-              <p className="text-muted-foreground">
-                Here you can track and manage your orders.
-              </p>
-              <div className="mt-4">
-                <p>No orders yet.</p>
-                <Button asChild>
-                  <Link to="/products">
-                    Continue Shopping
-                  </Link>
-                </Button>
-              </div>
+              
+              {loading ? (
+                <p className="text-center py-4">Loading orders...</p>
+              ) : orders.length > 0 ? (
+                <div className="divide-y">
+                  {orders.map(order => (
+                    <div key={order.id} className="py-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <div>
+                          <span className="font-medium">Order #{order.id.substring(0, 8)}</span>
+                          <span className="ml-2 text-sm text-muted-foreground">
+                            {order.createdAt.toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="inline-block px-2 py-1 text-xs rounded bg-primary/10 text-primary font-medium">
+                            {order.status}
+                          </span>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          {order.items.length} {order.items.length === 1 ? 'item' : 'items'} • 
+                          Total: ₹{order.total.toFixed(2)} • 
+                          Paid via {order.paymentMethod}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <p className="text-muted-foreground">No orders yet.</p>
+                  <Button asChild className="mt-4">
+                    <Link to="/products">
+                      Continue Shopping
+                    </Link>
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </TabsContent>

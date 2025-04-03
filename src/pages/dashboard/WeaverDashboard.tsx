@@ -1,698 +1,380 @@
-
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend
-} from 'recharts';
-import { 
-  Package, 
-  Users, 
-  DollarSign, 
-  Inbox, 
-  PlusCircle, 
-  Search, 
-  LogOut, 
-  ChevronDown,
-  MessageSquare,
-  BarChart3,
-  Upload,
-  Image,
-  FileText,
-  Save,
-  X
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle, 
-  CardFooter
-} from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
-import { 
-  weavers, 
-  orderStatusData, 
-  monthlySalesData, 
-  fabricTypeSalesData, 
-  productsWithWeavers 
-} from '@/lib/data';
-import { OrderStatus, FabricType, UserRole } from '@/lib/types';
-import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PlusCircle, ShoppingBag, MessageSquare, Store, Users, Package } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { UserRole, FabricType, Product, Order } from "@/lib/types";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { toast } from "sonner";
+import ProfileVisibilityToggle from "@/components/profile/ProfileVisibilityToggle";
+import ImageUpload from "@/components/product/ImageUpload";
+import { supabase } from "@/integrations/supabase/client";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { getInitials } from "@/lib/utils";
+import { X } from 'lucide-react';
 
-// Colors for the pie chart
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A569BD', '#5DADE2'];
-
-// Mock conversations data
-const mockConversations = [
-  {
-    id: 'conv-001',
-    customerId: 'c1',
-    customerName: 'Priya Sharma',
-    customerAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330',
-    lastMessage: 'I wanted to ask about the silk saree',
-    timestamp: new Date(2023, 8, 25),
-    unread: true
-  },
-  {
-    id: 'conv-002',
-    customerId: 'c2',
-    customerName: 'Amit Patel',
-    customerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d',
-    lastMessage: 'Thank you for the quick delivery!',
-    timestamp: new Date(2023, 8, 20),
-    unread: false
-  }
-];
+// Product form schema
+const productSchema = z.object({
+  name: z.string().min(2, { message: "Name must be at least 2 characters" }),
+  description: z.string().min(10, { message: "Description must be at least 10 characters" }),
+  price: z.coerce.number().positive({ message: "Price must be positive" }),
+  discount: z.coerce.number().min(0, { message: "Discount must be 0 or positive" }).max(100, { message: "Discount cannot exceed 100%" }).optional(),
+  fabricType: z.nativeEnum(FabricType, { message: "Please select a fabric type" }),
+  inStock: z.boolean().default(true),
+  codAvailable: z.boolean().default(true),
+  upiEnabled: z.boolean().default(true),
+  cardEnabled: z.boolean().default(true),
+  tags: z.string().optional(),
+});
 
 const WeaverDashboard = () => {
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('overview');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState("profile");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newProduct, setNewProduct] = useState({
-    name: '',
-    description: '',
-    price: '',
-    fabricType: FabricType.COTTON,
-    inStock: true,
-    images: [] as string[]
-  });
+  const [productImages, setProductImages] = useState<string[]>([]);
   
-  // For demo purposes, we'll use the first weaver from the data
-  const currentWeaver = weavers[0];
-  
-  // Get products for this weaver
-  const weaverProducts = productsWithWeavers.filter(
-    p => p.weaverId === currentWeaver.id
-  );
-  
-  // Check authentication
-  useEffect(() => {
-    // Check if user is logged in
-    const storedUser = localStorage.getItem('user');
-    
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      
-      // Verify user role
-      if (parsedUser.role !== UserRole.WEAVER) {
-        toast.error("Unauthorized access", {
-          description: "This dashboard is for weavers only."
-        });
-        navigate('/auth');
-      } else {
-        setUser(parsedUser);
-      }
-    } else {
-      // Redirect to login if not logged in
-      toast.error("Authentication required", {
-        description: "Please log in to access your dashboard."
-      });
-      navigate('/auth', { state: { from: '/dashboard/weaver', reason: 'auth-required' } });
-    }
-    
-    setLoading(false);
-  }, [navigate]);
-  
-  // Render the status color for order statuses
-  const getStatusColor = (status: OrderStatus) => {
-    switch (status) {
-      case OrderStatus.PENDING:
-        return 'bg-yellow-500';
-      case OrderStatus.PROCESSING:
-        return 'bg-blue-500';
-      case OrderStatus.WEAVING:
-        return 'bg-purple-500';
-      case OrderStatus.SHIPPED:
-        return 'bg-green-500';
-      case OrderStatus.DELIVERED:
-        return 'bg-green-700';
-      case OrderStatus.CANCELLED:
-        return 'bg-red-500';
-      default:
-        return 'bg-gray-500';
-    }
-  };
-
-  // Format date for display
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    }).format(date);
-  };
-
-  // Handle product submission
-  const handleProductSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Validate form fields
-    if (!newProduct.name || !newProduct.description || !newProduct.price || !newProduct.images.length) {
-      toast.error("Please fill all required fields");
-      return;
-    }
-    
-    // Simulate product creation
-    toast.success("Product created successfully", {
-      description: "Your item has been posted and is now available for purchase."
-    });
-    
-    // Reset form
-    setNewProduct({
-      name: '',
-      description: '',
-      price: '',
+  const productForm = useForm<z.infer<typeof productSchema>>({
+    resolver: zodResolver(productSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      price: 0,
+      discount: 0,
       fabricType: FabricType.COTTON,
       inStock: true,
-      images: []
-    });
-    
-    // Switch to products tab to show the "new" product
-    setActiveTab('products');
-  };
+      codAvailable: true,
+      upiEnabled: true,
+      cardEnabled: true,
+      tags: "",
+    },
+  });
   
-  // Handle image upload
-  const handleImageUpload = () => {
-    // Simulate image upload with placeholder images
-    const placeholderImages = [
-      'https://images.unsplash.com/photo-1561849954-d28ad922814b?auto=format&fit=crop&q=80&w=2340&ixlib=rb-4.0.3',
-      'https://images.unsplash.com/photo-1617383543739-0524e8926dca?auto=format&fit=crop&q=80&w=2264&ixlib=rb-4.0.3'
-    ];
+  // Fetch weaver's products
+  useEffect(() => {
+    if (!user) return;
     
-    // Randomly select one of the placeholder images
-    const randomImage = placeholderImages[Math.floor(Math.random() * placeholderImages.length)];
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('weaver_id', user.id);
+        
+        if (error) throw error;
+        
+        if (data) {
+          const mappedProducts: Product[] = data.map((product: any) => ({
+            id: product.id,
+            name: product.name,
+            description: product.description || '',
+            images: product.images || [],
+            price: product.price,
+            discount: product.discount,
+            fabricType: product.fabric_type,
+            weaverId: product.weaver_id,
+            inStock: product.in_stock,
+            rating: product.rating,
+            reviewCount: product.review_count,
+            tags: product.tags || [],
+            createdAt: new Date(product.created_at),
+            codAvailable: product.cod_available,
+            upiEnabled: product.upi_enabled,
+            cardEnabled: product.card_enabled
+          }));
+          
+          setProducts(mappedProducts);
+        }
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        toast.error('Failed to load products');
+      } finally {
+        setLoading(false);
+      }
+    };
     
-    setNewProduct({
-      ...newProduct,
-      images: [...newProduct.images, randomImage]
-    });
-    
-    toast.success("Image uploaded successfully");
-  };
+    fetchProducts();
+  }, [user]);
   
-  // Handle logout
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    toast.success("Logged out successfully");
-    navigate('/');
-  };
-
-  // If loading or no user, show loading state
-  if (loading || !user) {
-    return (
-      <>
-        <Navbar />
-        <main className="pt-24 pb-16 min-h-screen">
-          <div className="container mx-auto px-4 md:px-6">
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-            </div>
-          </div>
-        </main>
-        <Footer />
-      </>
-    );
-  }
-
-  // Calculate total orders and revenue
-  const totalOrders = orderStatusData.reduce((sum, item) => sum + item.count, 0);
-  const totalRevenue = monthlySalesData.reduce((sum, item) => sum + item.sales, 0);
-
-  return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
+  // Fetch weaver's orders
+  useEffect(() => {
+    if (!user) return;
+    
+    const fetchOrders = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('orders')
+          .select(`
+            *,
+            items:order_items(*)
+          `)
+          .eq('weaver_id', user.id)
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        if (data) {
+          // Convert to our Order type
+          const processedOrders: Order[] = data.map((order: any) => ({
+            id: order.id,
+            customerId: order.customer_id,
+            weaverId: order.weaver_id,
+            items: order.items.map((item: any) => ({
+              productId: item.product_id,
+              quantity: item.quantity,
+              price: item.price
+            })),
+            status: order.status,
+            total: order.total,
+            paymentMethod: order.payment_method,
+            createdAt: new Date(order.created_at),
+            updatedAt: new Date(order.updated_at)
+          }));
+          
+          setOrders(processedOrders);
+        }
+      } catch (error) {
+        console.error('Error fetching orders:', error);
+      }
+    };
+    
+    fetchOrders();
+  }, [user]);
+  
+  const handleProductSubmit = async (values: z.infer<typeof productSchema>) => {
+    if (!user) return;
+    
+    try {
+      // Transform tags string to array
+      const tagsArray = values.tags ? values.tags.split(',').map(tag => tag.trim()) : [];
       
-      <div className="flex-1 pt-16">
-        <div className="flex">
-          {/* Sidebar */}
-          <aside 
-            className={cn(
-              "bg-primary text-primary-foreground h-[calc(100vh-64px)] sticky top-16 transition-all",
-              sidebarOpen ? "w-64" : "w-20"
-            )}
-          >
-            <div className="p-4">
-              <Button 
-                variant="ghost" 
-                className="w-full justify-start text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/10"
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-              >
-                <BarChart3 className="h-5 w-5 mr-2" />
-                {sidebarOpen && <span>Dashboard</span>}
-              </Button>
-              
-              <nav className="space-y-1 mt-6">
-                {[
-                  { icon: BarChart3, label: 'Overview', value: 'overview' },
-                  { icon: Package, label: 'Products', value: 'products' },
-                  { icon: Inbox, label: 'Orders', value: 'orders' },
-                  { icon: MessageSquare, label: 'Messages', value: 'messages' },
-                  { icon: PlusCircle, label: 'Add Product', value: 'add-product' },
-                  { icon: DollarSign, label: 'Sales', value: 'sales' },
-                  { icon: Users, label: 'Customers', value: 'customers' },
-                ].map((item) => (
-                  <Button 
-                    key={item.value}
-                    variant="ghost" 
-                    className={cn(
-                      "w-full justify-start text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/10",
-                      activeTab === item.value && "bg-white/10 text-primary-foreground"
-                    )}
-                    onClick={() => setActiveTab(item.value)}
-                  >
-                    <item.icon className="h-5 w-5 mr-2" />
-                    {sidebarOpen && <span>{item.label}</span>}
-                  </Button>
-                ))}
-              </nav>
-            </div>
+      // Create the product
+      const { data, error } = await supabase
+        .from('products')
+        .insert({
+          name: values.name,
+          description: values.description,
+          price: values.price,
+          discount: values.discount || 0,
+          fabric_type: values.fabricType,
+          weaver_id: user.id,
+          in_stock: values.inStock,
+          images: productImages,
+          tags: tagsArray,
+          cod_available: values.codAvailable,
+          upi_enabled: values.upiEnabled,
+          card_enabled: values.cardEnabled
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      // Add new product to state
+      if (data) {
+        const newProduct: Product = {
+          id: data.id,
+          name: data.name,
+          description: data.description || '',
+          images: data.images || [],
+          price: data.price,
+          discount: data.discount,
+          fabricType: data.fabric_type,
+          weaverId: data.weaver_id,
+          inStock: data.inStock,
+          rating: data.rating,
+          reviewCount: data.review_count,
+          tags: data.tags || [],
+          createdAt: new Date(data.created_at),
+          codAvailable: data.cod_available,
+          upiEnabled: data.upi_enabled,
+          cardEnabled: data.card_enabled
+        };
+        
+        setProducts(prev => [...prev, newProduct]);
+        
+        // Reset form
+        productForm.reset();
+        setProductImages([]);
+        
+        toast.success('Product added successfully');
+      }
+    } catch (error: any) {
+      console.error('Error adding product:', error);
+      toast.error('Failed to add product', {
+        description: error.message
+      });
+    }
+  };
+  
+  const handleImageUpload = (url: string) => {
+    setProductImages(prev => [...prev, url]);
+  };
+  
+  const removeImage = (index: number) => {
+    setProductImages(prev => prev.filter((_, i) => i !== index));
+  };
+  
+  if (!user) {
+    return <div>Loading...</div>;
+  }
+  
+  return (
+    <div className="container mx-auto px-4 py-10">
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center space-x-4">
+          <Avatar className="h-16 w-16">
+            <AvatarImage src={user.avatar_url} />
+            <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+          </Avatar>
+          <div>
+            <h1 className="text-2xl font-bold">{user.name}</h1>
+            <p className="text-muted-foreground">Weaver Dashboard</p>
+          </div>
+        </div>
+      </div>
+      
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid grid-cols-4 mb-8">
+          <TabsTrigger value="profile" className="flex items-center space-x-2">
+            <Users className="h-4 w-4" />
+            <span>Profile</span>
+          </TabsTrigger>
+          <TabsTrigger value="products" className="flex items-center space-x-2">
+            <Store className="h-4 w-4" />
+            <span>Products</span>
+          </TabsTrigger>
+          <TabsTrigger value="orders" className="flex items-center space-x-2">
+            <ShoppingBag className="h-4 w-4" />
+            <span>Orders</span>
+          </TabsTrigger>
+          <TabsTrigger value="messages" className="flex items-center space-x-2">
+            <MessageSquare className="h-4 w-4" />
+            <span>Messages</span>
+          </TabsTrigger>
+        </TabsList>
+        
+        {/* Profile Tab */}
+        <TabsContent value="profile">
+          <div className="grid gap-6 md:grid-cols-2">
+            <ProfileVisibilityToggle isPublic={user.isPublic || false} />
             
-            <div className="absolute bottom-0 left-0 right-0 p-4">
-              <Button 
-                variant="ghost" 
-                className="w-full justify-start text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/10"
-                onClick={handleLogout}
-              >
-                <LogOut className="h-5 w-5 mr-2" />
-                {sidebarOpen && <span>Logout</span>}
-              </Button>
-            </div>
-          </aside>
-
-          {/* Main Content */}
-          <div className="flex-1 p-6">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-8">
-              <div>
-                <h1 className="text-2xl font-medium">Weaver Dashboard</h1>
-                <p className="text-muted-foreground">
-                  Welcome back, {user.name}
-                </p>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <Input 
-                    placeholder="Search..." 
-                    className="pl-10 w-60"
-                  />
-                </div>
-                
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="flex items-center gap-2">
-                      <div className="w-10 h-10 rounded-full overflow-hidden">
-                        <img 
-                          src={currentWeaver.avatar} 
-                          alt={currentWeaver.name} 
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <div className="flex items-center gap-2 p-2">
-                      <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
-                        <img 
-                          src={currentWeaver.avatar} 
-                          alt={currentWeaver.name} 
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="flex-1 overflow-hidden">
-                        <p className="font-medium truncate">{currentWeaver.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-                      </div>
-                    </div>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => setActiveTab('add-product')}>
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      <span>Add New Product</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleLogout}>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Logout</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-            
-            {/* Dashboard Content */}
-            <div>
-              {/* Overview Tab */}
-              {activeTab === 'overview' && (
-                <div className="space-y-6">
-                  {/* Overview Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    {[
-                      { 
-                        title: 'Total Products', 
-                        value: weaverProducts.length, 
-                        icon: Package, 
-                        change: '+2 this week',
-                        color: 'bg-blue-100 text-blue-600'
-                      },
-                      { 
-                        title: 'Total Orders', 
-                        value: totalOrders, 
-                        icon: Inbox, 
-                        change: '+5 this week',
-                        color: 'bg-purple-100 text-purple-600'
-                      },
-                      { 
-                        title: 'Total Revenue', 
-                        value: `₹${(totalRevenue/1000).toFixed(0)}K`, 
-                        icon: DollarSign, 
-                        change: '+10% this month',
-                        color: 'bg-green-100 text-green-600'
-                      },
-                      { 
-                        title: 'Total Customers', 
-                        value: '120', 
-                        icon: Users, 
-                        change: '+12 this month',
-                        color: 'bg-amber-100 text-amber-600'
-                      }
-                    ].map((card, index) => (
-                      <Card key={index} className="hover:shadow-md transition-all duration-300">
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                          <CardTitle className="text-sm font-medium">
-                            {card.title}
-                          </CardTitle>
-                          <div className={cn("p-2 rounded-full", card.color)}>
-                            <card.icon className="h-4 w-4" />
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-2xl font-bold">{card.value}</div>
-                          <p className="text-xs text-muted-foreground">{card.change}</p>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                  
-                  {/* Charts Section */}
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                    <Card className="lg:col-span-2">
-                      <CardHeader>
-                        <CardTitle>Monthly Sales</CardTitle>
-                        <CardDescription>
-                          Sales performance over the past 12 months
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="h-80">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart
-                              data={monthlySalesData}
-                              margin={{
-                                top: 5,
-                                right: 30,
-                                left: 20,
-                                bottom: 5,
-                              }}
-                            >
-                              <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                              <XAxis dataKey="month" />
-                              <YAxis />
-                              <Tooltip 
-                                formatter={(value) => [`₹${value}`, 'Revenue']}
-                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} 
-                              />
-                              <Bar 
-                                dataKey="sales" 
-                                fill="#8884d8"
-                                radius={[4, 4, 0, 0]} 
-                              />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </CardContent>
-                    </Card>
+            {/* Profile form would go here */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Your Information</CardTitle>
+                <CardDescription>
+                  Update your public profile details
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p>Profile editing functionality is in the main profile section.</p>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+        
+        {/* Products Tab */}
+        <TabsContent value="products">
+          <div className="grid gap-6 md:grid-cols-3">
+            {/* Add new product card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Add New Product</CardTitle>
+                <CardDescription>
+                  Create a new product listing for your handloom items
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Form {...productForm}>
+                  <form onSubmit={productForm.handleSubmit(handleProductSubmit)} className="space-y-4">
+                    <FormField
+                      control={productForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Product Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Traditional Cotton Saree" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Sales by Fabric Type</CardTitle>
-                        <CardDescription>
-                          Distribution of sales across fabric types
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="h-80">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Pie
-                                data={fabricTypeSalesData}
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={60}
-                                outerRadius={90}
-                                fill="#8884d8"
-                                dataKey="value"
-                                label
-                              >
-                                {fabricTypeSalesData.map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                ))}
-                              </Pie>
-                              <Tooltip />
-                              <Legend />
-                            </PieChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                  
-                  {/* Recent Activity */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Recent Orders */}
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between">
-                        <div>
-                          <CardTitle>Recent Orders</CardTitle>
-                          <CardDescription>Latest customer orders</CardDescription>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          {orderStatusData.slice(0, 5).map((order, index) => (
-                            <div 
-                              key={index} 
-                              className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer"
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className={cn(
-                                  "w-2 h-2 rounded-full",
-                                  getStatusColor(order.status)
-                                )} />
-                                <div>
-                                  <div className="font-medium">Order #{1000 + index}</div>
-                                  <div className="text-sm text-muted-foreground capitalize">
-                                    {order.status}
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="text-sm text-muted-foreground">2h ago</div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                    
-                    {/* Recent Messages */}
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between">
-                        <div>
-                          <CardTitle>Recent Messages</CardTitle>
-                          <CardDescription>Customer communications</CardDescription>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          {mockConversations.map((conversation) => (
-                            <div 
-                              key={conversation.id} 
-                              className={cn(
-                                "flex items-center gap-4 p-4 rounded-lg cursor-pointer transition-colors",
-                                conversation.unread 
-                                  ? "bg-primary/5 hover:bg-primary/10" 
-                                  : "bg-secondary/30 hover:bg-secondary/50"
-                              )}
-                              onClick={() => navigate(`/chat/${conversation.customerId}`)}
-                            >
-                              <Avatar>
-                                <AvatarImage src={conversation.customerAvatar} />
-                                <AvatarFallback>{conversation.customerName.charAt(0)}</AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-baseline">
-                                  <h4 className="font-medium">{conversation.customerName}</h4>
-                                  <span className="text-xs text-muted-foreground">
-                                    {formatDate(conversation.timestamp)}
-                                  </span>
-                                </div>
-                                <p className={cn(
-                                  "text-sm truncate",
-                                  conversation.unread ? "text-foreground" : "text-muted-foreground"
-                                )}>
-                                  {conversation.lastMessage}
-                                </p>
-                              </div>
-                              {conversation.unread && (
-                                <div className="w-2 h-2 bg-primary rounded-full"></div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </div>
-              )}
-              
-              {/* Products Tab */}
-              {activeTab === 'products' && (
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <div>
-                      <CardTitle>Your Products</CardTitle>
-                      <CardDescription>Manage your handcrafted items</CardDescription>
-                    </div>
-                    <Button onClick={() => setActiveTab('add-product')}>
-                      <PlusCircle className="h-4 w-4 mr-2" />
-                      Add Product
-                    </Button>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {weaverProducts.map((product) => (
-                        <div 
-                          key={product.id} 
-                          className="flex flex-col md:flex-row items-start md:items-center gap-4 p-4 border rounded-lg hover:shadow-md transition-shadow"
-                        >
-                          <div className="w-full md:w-24 h-24 rounded-md overflow-hidden">
-                            <img 
-                              src={product.images[0]} 
-                              alt={product.name}
-                              className="w-full h-full object-cover" 
+                    <FormField
+                      control={productForm.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              {...field} 
+                              placeholder="Describe your product in detail..." 
+                              className="min-h-[100px]"
                             />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-medium text-lg">{product.name}</h3>
-                            <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
-                            <div className="flex items-center gap-2 mt-2">
-                              <span className="text-sm font-medium">₹{product.price.toLocaleString()}</span>
-                              <span className="text-xs px-2 py-0.5 bg-secondary rounded-full capitalize">{product.fabricType}</span>
-                              <span className={cn(
-                                "text-xs px-2 py-0.5 rounded-full",
-                                product.inStock 
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-red-100 text-red-700"
-                              )}>
-                                {product.inStock ? "In Stock" : "Out of Stock"}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex gap-2 mt-2 md:mt-0">
-                            <Button variant="outline" size="sm">Edit</Button>
-                            <Button variant="outline" size="sm" className="text-red-500">Delete</Button>
-                          </div>
-                        </div>
-                      ))}
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={productForm.control}
+                        name="price"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Price (₹)</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="number" min="0" step="0.01" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={productForm.control}
+                        name="discount"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Discount (%)</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="number" min="0" max="100" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
-                  </CardContent>
-                </Card>
-              )}
-              
-              {/* Add Product Tab */}
-              {activeTab === 'add-product' && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Add New Product</CardTitle>
-                    <CardDescription>Create a new handcrafted item to sell</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <form onSubmit={handleProductSubmit} className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <Label htmlFor="product-name">Product Name</Label>
-                          <Input 
-                            id="product-name" 
-                            placeholder="e.g., Handwoven Silk Saree" 
-                            value={newProduct.name}
-                            onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
-                            required
-                          />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor="product-price">Price (₹)</Label>
-                          <Input 
-                            id="product-price" 
-                            type="number" 
-                            placeholder="e.g., 4999" 
-                            value={newProduct.price}
-                            onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
-                            required
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="product-description">Description</Label>
-                        <Textarea 
-                          id="product-description" 
-                          placeholder="Describe your product in detail..." 
-                          className="min-h-[100px]"
-                          value={newProduct.description}
-                          onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
-                          required
-                        />
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <Label htmlFor="fabric-type">Fabric Type</Label>
+                    
+                    <FormField
+                      control={productForm.control}
+                      name="fabricType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Fabric Type</FormLabel>
                           <Select 
-                            value={newProduct.fabricType}
-                            onValueChange={(value) => setNewProduct({...newProduct, fabricType: value as FabricType})}
+                            onValueChange={field.onChange} 
+                            defaultValue={field.value}
                           >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select fabric type" />
-                            </SelectTrigger>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select fabric type" />
+                              </SelectTrigger>
+                            </FormControl>
                             <SelectContent>
                               {Object.values(FabricType).map((type) => (
                                 <SelectItem key={type} value={type}>
@@ -701,146 +383,277 @@ const WeaverDashboard = () => {
                               ))}
                             </SelectContent>
                           </Select>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label>Availability</Label>
-                          <div className="flex gap-4 pt-2">
-                            <Button 
-                              type="button"
-                              variant={newProduct.inStock ? "default" : "outline"} 
-                              size="sm"
-                              onClick={() => setNewProduct({...newProduct, inStock: true})}
-                            >
-                              In Stock
-                            </Button>
-                            <Button 
-                              type="button"
-                              variant={!newProduct.inStock ? "default" : "outline"} 
-                              size="sm"
-                              onClick={() => setNewProduct({...newProduct, inStock: false})}
-                            >
-                              Out of Stock
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={productForm.control}
+                      name="tags"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tags</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="traditional, festive, wedding" />
+                          </FormControl>
+                          <FormDescription>
+                            Separate tags with commas
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={productForm.control}
+                        name="inStock"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                            <FormControl>
+                              <input
+                                type="checkbox"
+                                checked={field.value}
+                                onChange={field.onChange}
+                                className="mr-2"
+                              />
+                            </FormControl>
+                            <FormLabel>In Stock</FormLabel>
+                          </FormItem>
+                        )}
+                      />
                       
-                      <div className="space-y-2">
-                        <Label>Product Images</Label>
-                        <div className="border-2 border-dashed rounded-lg p-4 text-center">
-                          <div className="space-y-2">
-                            <div className="flex justify-center">
-                              <Upload className="h-8 w-8 text-muted-foreground" />
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                              Drag and drop files here, or click to select files
-                            </p>
-                            <Button 
-                              type="button" 
-                              variant="outline" 
-                              onClick={handleImageUpload}
+                      <FormField
+                        control={productForm.control}
+                        name="codAvailable"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                            <FormControl>
+                              <input
+                                type="checkbox"
+                                checked={field.value}
+                                onChange={field.onChange}
+                                className="mr-2"
+                              />
+                            </FormControl>
+                            <FormLabel>COD Available</FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={productForm.control}
+                        name="upiEnabled"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                            <FormControl>
+                              <input
+                                type="checkbox"
+                                checked={field.value}
+                                onChange={field.onChange}
+                                className="mr-2"
+                              />
+                            </FormControl>
+                            <FormLabel>UPI Enabled</FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={productForm.control}
+                        name="cardEnabled"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                            <FormControl>
+                              <input
+                                type="checkbox"
+                                checked={field.value}
+                                onChange={field.onChange}
+                                className="mr-2"
+                              />
+                            </FormControl>
+                            <FormLabel>Card Enabled</FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label>Product Images</Label>
+                      <div className="grid grid-cols-2 gap-4 mt-2">
+                        {productImages.map((url, index) => (
+                          <div key={index} className="relative">
+                            <img src={url} alt={`Product ${index + 1}`} className="w-full h-32 object-cover rounded-md" />
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="destructive"
+                              className="absolute top-2 right-2"
+                              onClick={() => removeImage(index)}
                             >
-                              <Image className="h-4 w-4 mr-2" />
-                              Select Images
+                              <X className="h-4 w-4" />
                             </Button>
                           </div>
-                        </div>
+                        ))}
                         
-                        {/* Preview of uploaded images */}
-                        {newProduct.images.length > 0 && (
-                          <div className="grid grid-cols-3 gap-4 mt-4">
-                            {newProduct.images.map((image, index) => (
-                              <div key={index} className="relative rounded-md overflow-hidden h-24">
-                                <img src={image} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
-                                <Button 
-                                  type="button"
-                                  variant="destructive" 
-                                  size="icon" 
-                                  className="absolute top-1 right-1 h-6 w-6" 
-                                  onClick={() => setNewProduct({
-                                    ...newProduct, 
-                                    images: newProduct.images.filter((_, i) => i !== index)
-                                  })}
-                                >
-                                  <X className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
+                        {productImages.length < 5 && (
+                          <ImageUpload 
+                            onUpload={handleImageUpload}
+                            bucketName="product_images"
+                            folderPath={user.id}
+                          />
                         )}
                       </div>
-                      
-                      <Button type="submit" className="w-full">
-                        <Save className="h-4 w-4 mr-2" />
-                        Save Product
-                      </Button>
-                    </form>
-                  </CardContent>
-                </Card>
-              )}
-              
-              {/* Messages Tab */}
-              {activeTab === 'messages' && (
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                      {productImages.length === 0 && (
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Please add at least one product image
+                        </p>
+                      )}
+                    </div>
+                    
+                    <Button type="submit" className="w-full" disabled={productImages.length === 0}>
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Add Product
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+            
+            {/* Existing products */}
+            {products.map(product => (
+              <Card key={product.id}>
+                <div className="aspect-square relative">
+                  <img 
+                    src={product.images[0] || '/placeholder.svg'} 
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                  />
+                  {product.discount && product.discount > 0 && (
+                    <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
+                      {product.discount}% OFF
+                    </div>
+                  )}
+                </div>
+                <CardHeader>
+                  <CardTitle className="line-clamp-1">{product.name}</CardTitle>
+                  <CardDescription className="line-clamp-2">
+                    {product.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex justify-between items-center">
                     <div>
-                      <CardTitle>Customer Messages</CardTitle>
-                      <CardDescription>Chat with your customers</CardDescription>
+                      <p className="text-lg font-bold">₹{product.price}</p>
+                      {product.discount && product.discount > 0 && (
+                        <p className="text-sm text-muted-foreground line-through">
+                          ₹{(product.price / (1 - product.discount / 100)).toFixed(2)}
+                        </p>
+                      )}
                     </div>
-                    <div className="relative w-64">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                      <Input placeholder="Search messages..." className="pl-10" />
+                    <div className="text-sm">
+                      <span className={product.inStock ? "text-green-500" : "text-red-500"}>
+                        {product.inStock ? "In Stock" : "Out of Stock"}
+                      </span>
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {mockConversations.map((conversation) => (
-                        <div 
-                          key={conversation.id} 
-                          className={cn(
-                            "flex items-center gap-4 p-4 rounded-lg cursor-pointer transition-colors",
-                            conversation.unread 
-                              ? "bg-primary/5 hover:bg-primary/10" 
-                              : "hover:bg-secondary"
-                          )}
-                          onClick={() => navigate(`/chat/${conversation.customerId}`)}
-                        >
-                          <Avatar>
-                            <AvatarImage src={conversation.customerAvatar} />
-                            <AvatarFallback>{conversation.customerName.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex justify-between items-baseline">
-                              <h4 className="font-medium">{conversation.customerName}</h4>
-                              <span className="text-xs text-muted-foreground">
-                                {formatDate(conversation.timestamp)}
-                              </span>
-                            </div>
-                            <p className={cn(
-                              "text-sm truncate",
-                              conversation.unread ? "text-foreground" : "text-muted-foreground"
-                            )}>
-                              {conversation.lastMessage}
-                            </p>
-                          </div>
-                          {conversation.unread && (
-                            <div className="w-2 h-2 bg-primary rounded-full"></div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-              
-              {/* Other tabs can be implemented as needed */}
-            </div>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {product.tags.slice(0, 3).map((tag, idx) => (
+                      <span key={idx} className="bg-secondary px-2 py-0.5 rounded-full text-xs">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </CardContent>
+                <CardFooter className="flex justify-between">
+                  <Button variant="outline" size="sm">Edit</Button>
+                  <Button variant="destructive" size="sm">Remove</Button>
+                </CardFooter>
+              </Card>
+            ))}
+            
+            {loading && <p>Loading products...</p>}
+            
+            {!loading && products.length === 0 && (
+              <Card className="col-span-3 py-10">
+                <div className="text-center">
+                  <Package className="mx-auto h-12 w-12 text-muted-foreground" />
+                  <h3 className="mt-2 text-lg font-medium">No Products Yet</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Add your first product to start selling on Threadly.
+                  </p>
+                </div>
+              </Card>
+            )}
           </div>
-        </div>
-      </div>
-      
-      <Footer />
+        </TabsContent>
+        
+        {/* Orders Tab */}
+        <TabsContent value="orders">
+          <Card>
+            <CardHeader>
+              <CardTitle>Your Orders</CardTitle>
+              <CardDescription>
+                Manage and track all orders from customers
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {orders.length > 0 ? (
+                <div className="divide-y">
+                  {orders.map(order => (
+                    <div key={order.id} className="py-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <div>
+                          <span className="font-medium">Order #{order.id.substring(0, 8)}</span>
+                          <span className="ml-2 text-sm text-muted-foreground">
+                            {order.createdAt.toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="inline-block px-2 py-1 text-xs rounded bg-primary/10 text-primary font-medium">
+                            {order.status}
+                          </span>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          {order.items.length} {order.items.length === 1 ? 'item' : 'items'} • 
+                          Total: ₹{order.total.toFixed(2)} • 
+                          Paid via {order.paymentMethod}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <ShoppingBag className="mx-auto h-12 w-12 text-muted-foreground" />
+                  <h3 className="mt-2 text-lg font-medium">No Orders Yet</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Your orders will appear here once customers start purchasing.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* Messages Tab */}
+        <TabsContent value="messages">
+          <Card>
+            <CardHeader>
+              <CardTitle>Messages</CardTitle>
+              <CardDescription>
+                Chat with customers interested in your products
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p>Messages functionality is handled by the chat components.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

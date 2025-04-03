@@ -1,46 +1,122 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
-import { weavers, products } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, MessageSquare, Share2, Star } from 'lucide-react';
 import ProductCard from '@/components/ui/ProductCard';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { Product, User, UserRole } from '@/lib/types';
+import { useAuth } from '@/context/AuthContext';
 
 const WeaverDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   
-  // Find the weaver by ID
-  const weaver = weavers.find(w => w.id === id);
+  const [isLoading, setIsLoading] = useState(true);
+  const [weaver, setWeaver] = useState<User | null>(null);
+  const [weaverProducts, setWeaverProducts] = useState<Product[]>([]);
+  const [averageRating, setAverageRating] = useState(0);
+  const [totalRatings, setTotalRatings] = useState(0);
   
-  // Get weaver's products
-  const weaverProducts = products.filter(p => p.weaverId === id);
-  
-  // Calculate average rating
-  const ratings = weaverProducts
-    .filter(p => p.rating)
-    .map(p => p.rating || 0);
-  
-  const averageRating = ratings.length 
-    ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length 
-    : 0;
+  // Fetch weaver and their products
+  useEffect(() => {
+    const fetchWeaverData = async () => {
+      if (!id) return;
+      
+      try {
+        setIsLoading(true);
+        
+        // Fetch weaver profile
+        const { data: weaverData, error: weaverError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', id)
+          .single();
+        
+        if (weaverError) throw weaverError;
+        
+        if (weaverData) {
+          const mappedWeaver: User = {
+            id: weaverData.id,
+            name: weaverData.name || '',
+            email: weaverData.email || '',
+            role: weaverData.role as UserRole,
+            avatar_url: weaverData.avatar_url,
+            bio: weaverData.bio,
+            isVerified: weaverData.is_verified,
+            isPublic: true, // We can see this weaver, so must be public
+            createdAt: new Date(weaverData.created_at)
+          };
+          
+          setWeaver(mappedWeaver);
+          
+          // Fetch weaver's products
+          const { data: productsData, error: productsError } = await supabase
+            .from('products')
+            .select('*')
+            .eq('weaver_id', id);
+          
+          if (productsError) throw productsError;
+          
+          if (productsData) {
+            const mappedProducts: Product[] = productsData.map((product: any) => ({
+              id: product.id,
+              name: product.name,
+              description: product.description || '',
+              images: product.images || [],
+              price: product.price,
+              discount: product.discount,
+              fabricType: product.fabric_type,
+              weaverId: product.weaver_id,
+              weaver: mappedWeaver,
+              inStock: product.in_stock,
+              rating: product.rating,
+              reviewCount: product.review_count,
+              tags: product.tags || [],
+              createdAt: new Date(product.created_at),
+              codAvailable: product.cod_available,
+              upiEnabled: product.upi_enabled,
+              cardEnabled: product.card_enabled
+            }));
+            
+            setWeaverProducts(mappedProducts);
+            
+            // Calculate average rating
+            const ratings = mappedProducts.filter(p => p.rating).map(p => p.rating || 0);
+            const totalRatingsCount = ratings.length;
+            const avgRating = totalRatingsCount 
+              ? ratings.reduce((sum, rating) => sum + rating, 0) / totalRatingsCount 
+              : 0;
+            
+            setAverageRating(avgRating);
+            setTotalRatings(totalRatingsCount);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching weaver data:', error);
+        toast.error('Failed to load weaver data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchWeaverData();
+  }, [id]);
   
   const handleMessageClick = () => {
-    // Check if user is logged in from localStorage
-    const user = localStorage.getItem('user');
     if (!user) {
-      toast("Please sign in to send messages");
-      navigate('/auth');
+      toast.info("Please sign in to send messages");
+      navigate('/auth', { state: { from: `/weavers/${id}` } });
       return;
     }
     
-    const userData = JSON.parse(user);
-    if (userData.role === 'weaver') {
-      toast("Weavers cannot message other weavers");
+    if (user.role === UserRole.WEAVER) {
+      toast.info("Weavers cannot message other weavers");
       return;
     }
     
@@ -48,7 +124,21 @@ const WeaverDetail = () => {
     navigate(`/dashboard/customer?tab=messages&weaver=${id}`);
   };
   
-  // Handle if weaver not found
+  // Handle if weaver not found or still loading
+  if (isLoading) {
+    return (
+      <>
+        <Navbar />
+        <main className="pt-32 pb-20">
+          <div className="container mx-auto px-4 md:px-6 text-center">
+            <h1 className="text-3xl font-medium mb-4">Loading Weaver Profile...</h1>
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
+  
   if (!weaver) {
     return (
       <>
@@ -105,7 +195,7 @@ const WeaverDetail = () => {
             <div className="md:col-span-1">
               <div className="relative">
                 <img 
-                  src={weaver.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=1364&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'} 
+                  src={weaver.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=1364&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'} 
                   alt={weaver.name} 
                   className="w-full aspect-square object-cover rounded-xl"
                 />
@@ -125,7 +215,7 @@ const WeaverDetail = () => {
                         <Star className="w-5 h-5 fill-amber-500 text-amber-500 mr-1" />
                         <span className="font-medium">{averageRating.toFixed(1)}</span>
                         <span className="mx-1">•</span>
-                        <span>{ratings.length} reviews</span>
+                        <span>{totalRatings} reviews</span>
                       </div>
                     )}
                     <div>{weaverProducts.length} Products</div>
@@ -170,7 +260,7 @@ const WeaverDetail = () => {
                 {weaverProducts.map((product, index) => (
                   <ProductCard 
                     key={product.id} 
-                    product={{...product, weaver}} 
+                    product={product} 
                     className={cn("hover-lift animate-scale-in")}
                     style={{ animationDelay: `${index * 100}ms` }}
                   />

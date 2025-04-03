@@ -19,6 +19,7 @@ export interface User {
   // Add these for extended functionality in components
   productCount?: number;
   averageRating?: number;
+  isPublic?: boolean; // Add this for weaver profile visibility control
 }
 
 export enum FabricType {
@@ -76,6 +77,7 @@ export interface Order {
   id: string;
   customerId: string;
   customer?: User;
+  weaverId: string; // Add weaver ID for tracking orders per weaver
   items: OrderItem[];
   status: OrderStatus;
   total: number;
