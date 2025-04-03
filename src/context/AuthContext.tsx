@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
@@ -56,11 +57,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
+        console.log("Auth state changed:", event, currentSession?.user?.id);
         setSession(currentSession);
         
         setTimeout(async () => {
           if (currentSession?.user) {
             const mappedUser = await mapSupabaseUser(currentSession.user);
+            console.log("Mapped user:", mappedUser);
             setUser(mappedUser);
           } else {
             setUser(null);
@@ -70,11 +73,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     );
 
+    // Initial session check
     supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
+      console.log("Initial session check:", currentSession?.user?.id);
       setSession(currentSession);
       
       if (currentSession?.user) {
         const mappedUser = await mapSupabaseUser(currentSession.user);
+        console.log("Initial mapped user:", mappedUser);
         setUser(mappedUser);
       }
       
@@ -110,6 +116,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       setLoading(true);
       
+      // Signing up without email confirmation
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -119,11 +126,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             role,
             bio
           },
+          // Explicitly set to undefined to bypass email confirmation
           emailRedirectTo: undefined,
         },
       });
       
       if (error) throw error;
+      
+      // Immediately sign in the user after sign up
+      await supabase.auth.signInWithPassword({ email, password });
       
       toast.success("Registration successful", {
         description: "Your account has been created. Welcome to Threadly!"
