@@ -47,6 +47,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         avatar_url: profile.avatar_url,
         bio: profile.bio,
         isVerified: profile.is_verified,
+        isPublic: profile.is_public,
         createdAt: new Date(profile.created_at)
       };
     } catch (error) {
@@ -171,6 +172,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           name: updates.name,
           bio: updates.bio,
           avatar_url: updates.avatar_url,
+          is_public: updates.isPublic,
         })
         .eq('id', user.id);
       

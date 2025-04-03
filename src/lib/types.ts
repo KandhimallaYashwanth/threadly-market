@@ -1,4 +1,3 @@
-
 export enum UserRole {
   CUSTOMER = 'customer',
   WEAVER = 'weaver',
@@ -15,11 +14,11 @@ export interface User {
   avatar?: string;
   bio?: string;
   isVerified?: boolean;
+  isPublic?: boolean;
   createdAt: Date;
   // Add these for extended functionality in components
   productCount?: number;
   averageRating?: number;
-  isPublic?: boolean; // Add this for weaver profile visibility control
 }
 
 export enum FabricType {

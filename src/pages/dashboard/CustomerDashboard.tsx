@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { User, UserRole, Order } from '@/lib/types';
+import { User, UserRole, Order, OrderStatus, PaymentMethod } from '@/lib/types';
 import ConversationsList from '@/components/dashboard/ConversationsList';
 import ChatSection from '@/components/dashboard/ChatSection';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
-// Define the expected props for ChatSection to match the component's requirements
 interface ChatSectionProps {
   currentUser: User;
   receiver: User;
@@ -22,7 +21,6 @@ const CustomerDashboard = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Update selectedWeaver from URL query param
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get('tab');
@@ -33,7 +31,6 @@ const CustomerDashboard = () => {
     }
     
     if (weaverId && tabParam === 'messages') {
-      // Fetch weaver data by ID
       const fetchWeaver = async () => {
         try {
           const { data, error } = await supabase
@@ -45,7 +42,6 @@ const CustomerDashboard = () => {
           if (error) throw error;
           
           if (data) {
-            // Convert to User type
             const weaverData: User = {
               id: data.id,
               name: data.name || '',
@@ -54,6 +50,7 @@ const CustomerDashboard = () => {
               avatar_url: data.avatar_url,
               bio: data.bio,
               isVerified: data.is_verified,
+              isPublic: data.is_public,
               createdAt: new Date(data.created_at)
             };
             
@@ -68,28 +65,25 @@ const CustomerDashboard = () => {
     }
   }, []);
 
-  // Fetch customer orders
   useEffect(() => {
     const fetchOrders = async () => {
       if (!user) return;
 
       try {
         setLoading(true);
-        // Use raw SQL query via RPC to avoid type issues with Supabase client
+        
         const { data, error } = await supabase
           .from('orders')
           .select(`
             *,
-            order_items:order_items(*)
+            order_items(*)
           `)
           .eq('customer_id', user.id)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
 
-        // Process and set orders
         if (data) {
-          // Convert to our Order type
           const processedOrders: Order[] = data.map((order: any) => ({
             id: order.id,
             customerId: order.customer_id,
@@ -99,9 +93,9 @@ const CustomerDashboard = () => {
               quantity: item.quantity,
               price: item.price
             })),
-            status: order.status,
+            status: order.status as OrderStatus,
             total: order.total,
-            paymentMethod: order.payment_method,
+            paymentMethod: order.payment_method as PaymentMethod,
             createdAt: new Date(order.created_at),
             updatedAt: new Date(order.updated_at)
           }));

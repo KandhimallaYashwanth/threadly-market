@@ -9,6 +9,96 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      order_items: {
+        Row: {
+          created_at: string | null
+          id: string
+          order_id: string
+          price: number
+          product_id: string
+          quantity: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          order_id: string
+          price: number
+          product_id: string
+          quantity?: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          order_id?: string
+          price?: number
+          product_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          created_at: string | null
+          customer_id: string
+          id: string
+          payment_method: string
+          status: string
+          total: number
+          updated_at: string | null
+          weaver_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id: string
+          id?: string
+          payment_method?: string
+          status?: string
+          total?: number
+          updated_at?: string | null
+          weaver_id: string
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string
+          id?: string
+          payment_method?: string
+          status?: string
+          total?: number
+          updated_at?: string | null
+          weaver_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_weaver_id_fkey"
+            columns: ["weaver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           card_enabled: boolean | null
@@ -73,6 +163,7 @@ export type Database = {
           created_at: string | null
           email: string | null
           id: string
+          is_public: boolean | null
           is_verified: boolean | null
           name: string | null
           role: string
@@ -83,6 +174,7 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           id: string
+          is_public?: boolean | null
           is_verified?: boolean | null
           name?: string | null
           role: string
@@ -93,6 +185,7 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           id?: string
+          is_public?: boolean | null
           is_verified?: boolean | null
           name?: string | null
           role?: string
