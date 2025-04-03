@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { User, UserRole } from '@/lib/types';
@@ -8,6 +9,12 @@ import { Home, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+
+// Define the expected props for ChatSection to match the component's requirements
+interface ChatSectionProps {
+  currentUser: User;
+  receiver: User;
+}
 
 const CustomerDashboard = () => {
   const { user } = useAuth();
@@ -127,7 +134,10 @@ const CustomerDashboard = () => {
               <div className="rounded-md border">
                 <div className="p-4">
                   {selectedWeaver ? (
-                    <ChatSection currentUser={user} receiver={selectedWeaver} />
+                    <ChatSection 
+                      currentUser={user} 
+                      receiver={selectedWeaver} 
+                    />
                   ) : (
                     <div className="text-center py-24">
                       <h3 className="text-xl font-medium mb-2">Select a Weaver to start a conversation</h3>

@@ -2,11 +2,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { PostgrestError } from '@supabase/supabase-js';
+
+// Define valid table names to ensure type safety
+type TableName = 'products' | 'profiles';
 
 // Generic hook for fetching data from Supabase
 export function useSupabaseQuery<T>(
   queryKey: string[],
-  tableName: string,
+  tableName: TableName,
   options: {
     columns?: string;
     filters?: Record<string, any>;
@@ -63,7 +67,7 @@ export function useSupabaseQuery<T>(
 
 // Hook for inserting data into Supabase
 export function useSupabaseInsert<T>(
-  tableName: string,
+  tableName: TableName,
   options: {
     onSuccess?: (data: T) => void;
     onError?: (error: Error) => void;
@@ -73,7 +77,7 @@ export function useSupabaseInsert<T>(
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (newData: Partial<T>) => {
+    mutationFn: async (newData: any) => {
       const { data, error } = await supabase
         .from(tableName)
         .insert(newData)
@@ -110,7 +114,7 @@ export function useSupabaseInsert<T>(
 
 // Hook for updating data in Supabase
 export function useSupabaseUpdate<T>(
-  tableName: string,
+  tableName: TableName,
   options: {
     onSuccess?: (data: T) => void;
     onError?: (error: Error) => void;
@@ -127,7 +131,7 @@ export function useSupabaseUpdate<T>(
       data 
     }: { 
       id: string; 
-      data: Partial<T> 
+      data: any
     }) => {
       const { data: updatedData, error } = await supabase
         .from(tableName)
@@ -166,7 +170,7 @@ export function useSupabaseUpdate<T>(
 
 // Hook for deleting data from Supabase
 export function useSupabaseDelete(
-  tableName: string,
+  tableName: TableName,
   options: {
     onSuccess?: () => void;
     onError?: (error: Error) => void;
@@ -212,9 +216,9 @@ export function useSupabaseDelete(
   });
 }
 
-// Hook for realtime subscriptions
+// Hook for realtime subscriptions using the newer channel-based API
 export function useRealtimeSubscription(
-  tableName: string,
+  tableName: TableName,
   eventTypes: ('INSERT' | 'UPDATE' | 'DELETE')[],
   callback: (payload: any) => void
 ) {

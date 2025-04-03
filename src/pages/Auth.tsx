@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { LogIn, BadgeCheck, User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
@@ -110,7 +109,7 @@ const Auth = () => {
         values.email, 
         values.password, 
         values.name, 
-        values.role,
+        values.role as UserRole.CUSTOMER | UserRole.WEAVER,
         values.bio
       );
     } catch (error) {
