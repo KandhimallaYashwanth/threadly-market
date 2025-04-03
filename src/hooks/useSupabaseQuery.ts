@@ -77,7 +77,7 @@ export function useSupabaseInsert<T>(
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (newData: any) => {
+    mutationFn: async (newData: Record<string, any>) => {
       const { data, error } = await supabase
         .from(tableName)
         .insert(newData)
@@ -131,7 +131,7 @@ export function useSupabaseUpdate<T>(
       data 
     }: { 
       id: string; 
-      data: Record<string, any> 
+      data: Record<string, any>
     }) => {
       const { data: updatedData, error } = await supabase
         .from(tableName)
@@ -225,11 +225,11 @@ export function useRealtimeSubscription(
   const channelName = `realtime-${tableName}`;
   
   const setupSubscription = () => {
-    // Fix the type error by using the correct type for channel events
+    // Fix the type error by using a type assertion for the event type
     const channel = supabase
       .channel(channelName)
       .on(
-        'postgres_changes', // This is correct, but TypeScript is confused
+        'postgres_changes' as any, // Use type assertion to fix the type error
         { 
           event: eventTypes, 
           schema: 'public', 
@@ -239,7 +239,7 @@ export function useRealtimeSubscription(
           callback(payload);
         }
       )
-      .subscribe() as any; // Use type assertion to bypass type error
+      .subscribe();
     
     return () => {
       supabase.removeChannel(channel);
