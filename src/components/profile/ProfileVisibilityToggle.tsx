@@ -30,7 +30,7 @@ const ProfileVisibilityToggle: React.FC<ProfileVisibilityToggleProps> = ({
       // Update the profile visibility in the database
       const { error } = await supabase
         .from('profiles')
-        .update({ is_public: checked })
+        .update({ is_public: checked }) // This matches the column name in the database
         .eq('id', user.id);
       
       if (error) throw error;
@@ -39,7 +39,7 @@ const ProfileVisibilityToggle: React.FC<ProfileVisibilityToggleProps> = ({
       setIsVisible(checked);
       
       // Update user context
-      updateProfile({ isPublic: checked });
+      updateProfile({ isPublic: checked }); // But we use isPublic in our app code
       
       // Call onChange if provided
       if (onChange) {

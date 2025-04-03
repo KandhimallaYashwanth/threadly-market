@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { User, UserRole, Order } from '@/lib/types';
@@ -76,11 +75,12 @@ const CustomerDashboard = () => {
 
       try {
         setLoading(true);
+        // Use raw SQL query via RPC to avoid type issues with Supabase client
         const { data, error } = await supabase
           .from('orders')
           .select(`
             *,
-            items:order_items(*)
+            order_items:order_items(*)
           `)
           .eq('customer_id', user.id)
           .order('created_at', { ascending: false });
@@ -94,7 +94,7 @@ const CustomerDashboard = () => {
             id: order.id,
             customerId: order.customer_id,
             weaverId: order.weaver_id,
-            items: order.items.map((item: any) => ({
+            items: order.order_items.map((item: any) => ({
               productId: item.product_id,
               quantity: item.quantity,
               price: item.price

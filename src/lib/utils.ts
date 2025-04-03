@@ -31,12 +31,14 @@ export function getInitials(name: string): string {
   return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
 }
 
-// Generate a fixed length user ID
+// Generate a fixed length user ID (8 or 9 digits)
 export function generateUserId(length: number = 9): string {
+  // Ensure length is either 8 or 9
+  const validLength = length === 8 ? 8 : 9;
   const characters = '0123456789';
   let result = '';
   
-  for (let i = 0; i < length; i++) {
+  for (let i = 0; i < validLength; i++) {
     result += characters.charAt(Math.floor(Math.random() * characters.length));
   }
   

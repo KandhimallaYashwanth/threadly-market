@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, ShoppingBag, MessageSquare, Store, Users, Package } from "lucide-react";
+import { PlusCircle, ShoppingBag, MessageSquare, Store, Users, Package, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { UserRole, FabricType, Product, Order } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -19,7 +19,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { getInitials } from "@/lib/utils";
-import { X } from 'lucide-react';
 
 // Product form schema
 const productSchema = z.object({
@@ -81,7 +80,7 @@ const WeaverDashboard = () => {
             images: product.images || [],
             price: product.price,
             discount: product.discount,
-            fabricType: product.fabric_type,
+            fabricType: product.fabric_type as FabricType,
             weaverId: product.weaver_id,
             inStock: product.in_stock,
             rating: product.rating,
@@ -116,7 +115,7 @@ const WeaverDashboard = () => {
           .from('orders')
           .select(`
             *,
-            items:order_items(*)
+            order_items:order_items(*)
           `)
           .eq('weaver_id', user.id)
           .order('created_at', { ascending: false });
@@ -124,12 +123,11 @@ const WeaverDashboard = () => {
         if (error) throw error;
         
         if (data) {
-          // Convert to our Order type
           const processedOrders: Order[] = data.map((order: any) => ({
             id: order.id,
             customerId: order.customer_id,
             weaverId: order.weaver_id,
-            items: order.items.map((item: any) => ({
+            items: order.order_items.map((item: any) => ({
               productId: item.product_id,
               quantity: item.quantity,
               price: item.price
@@ -155,10 +153,8 @@ const WeaverDashboard = () => {
     if (!user) return;
     
     try {
-      // Transform tags string to array
       const tagsArray = values.tags ? values.tags.split(',').map(tag => tag.trim()) : [];
       
-      // Create the product
       const { data, error } = await supabase
         .from('products')
         .insert({
@@ -180,7 +176,6 @@ const WeaverDashboard = () => {
       
       if (error) throw error;
       
-      // Add new product to state
       if (data) {
         const newProduct: Product = {
           id: data.id,
@@ -189,9 +184,9 @@ const WeaverDashboard = () => {
           images: data.images || [],
           price: data.price,
           discount: data.discount,
-          fabricType: data.fabric_type,
+          fabricType: data.fabric_type as FabricType,
           weaverId: data.weaver_id,
-          inStock: data.inStock,
+          inStock: data.in_stock,
           rating: data.rating,
           reviewCount: data.review_count,
           tags: data.tags || [],
@@ -203,7 +198,6 @@ const WeaverDashboard = () => {
         
         setProducts(prev => [...prev, newProduct]);
         
-        // Reset form
         productForm.reset();
         setProductImages([]);
         
@@ -264,12 +258,10 @@ const WeaverDashboard = () => {
           </TabsTrigger>
         </TabsList>
         
-        {/* Profile Tab */}
         <TabsContent value="profile">
           <div className="grid gap-6 md:grid-cols-2">
             <ProfileVisibilityToggle isPublic={user.isPublic || false} />
             
-            {/* Profile form would go here */}
             <Card>
               <CardHeader>
                 <CardTitle>Your Information</CardTitle>
@@ -284,10 +276,8 @@ const WeaverDashboard = () => {
           </div>
         </TabsContent>
         
-        {/* Products Tab */}
         <TabsContent value="products">
           <div className="grid gap-6 md:grid-cols-3">
-            {/* Add new product card */}
             <Card>
               <CardHeader>
                 <CardTitle>Add New Product</CardTitle>
@@ -521,7 +511,6 @@ const WeaverDashboard = () => {
               </CardContent>
             </Card>
             
-            {/* Existing products */}
             {products.map(product => (
               <Card key={product.id}>
                 <div className="aspect-square relative">
@@ -589,7 +578,6 @@ const WeaverDashboard = () => {
           </div>
         </TabsContent>
         
-        {/* Orders Tab */}
         <TabsContent value="orders">
           <Card>
             <CardHeader>
@@ -639,7 +627,6 @@ const WeaverDashboard = () => {
           </Card>
         </TabsContent>
         
-        {/* Messages Tab */}
         <TabsContent value="messages">
           <Card>
             <CardHeader>
