@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { LogIn, BadgeCheck, User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
@@ -47,6 +48,7 @@ const Auth = () => {
   
   const [showPassword, setShowPassword] = useState(false);
   const [accountType, setAccountType] = useState<UserRole>(UserRole.CUSTOMER);
+  const [redirectTriggered, setRedirectTriggered] = useState(false);
   
   // Setup form hooks
   const loginForm = useForm<z.infer<typeof loginSchema>>({
@@ -78,16 +80,29 @@ const Auth = () => {
     if (redirectReason === 'auth-required') {
       toast.info('Please log in to continue');
     }
-    
-    // If user is already logged in, redirect them
-    if (user) {
+  }, [redirectReason]);
+
+  // Separate useEffect for handling navigation after authentication
+  useEffect(() => {
+    // Only redirect if user exists and redirect hasn't been triggered yet
+    if (user && !redirectTriggered) {
+      setRedirectTriggered(true);
+      
+      console.log("Redirecting authenticated user:", user.role);
+      
       if (user.role === UserRole.WEAVER) {
-        navigate('/dashboard/weaver');
+        navigate('/dashboard/weaver', { replace: true });
+      } else if (user.role === UserRole.CUSTOMER) {
+        navigate('/dashboard/customer', { replace: true });
+      } else if (user.role === UserRole.ADMIN) {
+        // If there's an admin dashboard in the future
+        navigate('/dashboard/admin', { replace: true });
       } else {
-        navigate(from === '/auth' ? '/dashboard/customer' : from);
+        // Default fallback
+        navigate(from === '/auth' ? '/' : from, { replace: true });
       }
     }
-  }, [redirectReason, user, navigate, from]);
+  }, [user, navigate, from, redirectTriggered]);
   
   // Update role in form when account type changes
   useEffect(() => {
@@ -97,8 +112,8 @@ const Auth = () => {
   const handleLogin = async (values: z.infer<typeof loginSchema>) => {
     try {
       await signIn(values.email, values.password);
+      // No need to manually redirect here, the useEffect will handle it
     } catch (error) {
-      // Error is handled in the auth context
       console.error("Login error:", error);
     }
   };
@@ -112,11 +127,45 @@ const Auth = () => {
         values.role as UserRole.CUSTOMER | UserRole.WEAVER,
         values.bio
       );
+      // No need to manually redirect here, the useEffect will handle it
     } catch (error) {
-      // Error is handled in the auth context
       console.error("Registration error:", error);
     }
   };
+
+  // If already loading the user and auth state, show a loading indicator
+  if (loading && user === null) {
+    return (
+      <>
+        <Navbar />
+        <main className="pt-24 pb-16 min-h-screen">
+          <div className="container mx-auto px-4 flex items-center justify-center">
+            <div className="text-center">
+              <p>Loading, please wait...</p>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
+
+  // If user is already authenticated, don't show the auth form at all
+  if (user) {
+    return (
+      <>
+        <Navbar />
+        <main className="pt-24 pb-16 min-h-screen">
+          <div className="container mx-auto px-4 flex items-center justify-center">
+            <div className="text-center">
+              <p>You are already logged in. Redirecting...</p>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
 
   return (
     <>
