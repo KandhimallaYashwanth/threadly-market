@@ -20,6 +20,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { getInitials } from "@/lib/utils";
+import { useSupabaseQuery, useSupabaseInsert, useSupabaseDelete } from "@/hooks/useSupabaseQuery";
 
 // Product form schema
 const productSchema = z.object({
@@ -39,9 +40,9 @@ const WeaverDashboard = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("profile");
   const [products, setProducts] = useState<Product[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [productImages, setProductImages] = useState<string[]>([]);
+  const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
   
   const productForm = useForm<z.infer<typeof productSchema>>({
     resolver: zodResolver(productSchema),
@@ -59,54 +60,65 @@ const WeaverDashboard = () => {
     },
   });
   
-  // Fetch weaver's products
+  // Use the custom hook for fetching products
+  const { data: fetchedProducts, isLoading, error, refetch } = useSupabaseQuery(
+    ['weaver-products', user?.id],
+    'products',
+    {
+      filters: { weaver_id: user?.id },
+      order: { column: 'created_at', ascending: false }
+    }
+  );
+  
+  // Use the custom hook for inserting products
+  const { mutate: insertProduct } = useSupabaseInsert('products', {
+    onSuccess: () => {
+      refetch();
+      productForm.reset();
+      setProductImages([]);
+      toast.success('Product added successfully');
+    },
+    invalidateQueries: ['weaver-products']
+  });
+  
+  // Use the custom hook for deleting products
+  const { mutate: deleteProduct } = useSupabaseDelete('products', {
+    onSuccess: () => {
+      refetch();
+      toast.success('Product deleted successfully');
+    },
+    invalidateQueries: ['weaver-products']
+  });
+  
   useEffect(() => {
-    if (!user) return;
-    
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from('products')
-          .select('*')
-          .eq('weaver_id', user.id);
-        
-        if (error) throw error;
-        
-        if (data) {
-          const mappedProducts: Product[] = data.map((product: any) => ({
-            id: product.id,
-            name: product.name,
-            description: product.description || '',
-            images: product.images || [],
-            price: product.price,
-            discount: product.discount,
-            fabricType: product.fabric_type as FabricType,
-            weaverId: product.weaver_id,
-            inStock: product.in_stock,
-            rating: product.rating,
-            reviewCount: product.review_count,
-            tags: product.tags || [],
-            createdAt: new Date(product.created_at),
-            codAvailable: product.cod_available,
-            upiEnabled: product.upi_enabled,
-            cardEnabled: product.card_enabled
-          }));
-          
-          setProducts(mappedProducts);
-        }
-      } catch (error) {
-        console.error('Error fetching products:', error);
-        toast.error('Failed to load products');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchProducts();
-  }, [user]);
+    if (fetchedProducts && !isLoading) {
+      const mappedProducts: Product[] = (fetchedProducts as any[]).map((product: any) => ({
+        id: product.id,
+        name: product.name,
+        description: product.description || '',
+        images: product.images || [],
+        price: product.price,
+        discount: product.discount,
+        fabricType: product.fabric_type as FabricType,
+        weaverId: product.weaver_id,
+        inStock: product.in_stock,
+        rating: product.rating,
+        reviewCount: product.review_count,
+        tags: product.tags || [],
+        createdAt: new Date(product.created_at),
+        codAvailable: product.cod_available,
+        upiEnabled: product.upi_enabled,
+        cardEnabled: product.card_enabled
+      }));
+      
+      setProducts(mappedProducts);
+      setLoading(false);
+    }
+  }, [fetchedProducts, isLoading]);
   
   // Fetch weaver's orders
+  const [orders, setOrders] = useState<Order[]>([]);
+  
   useEffect(() => {
     if (!user) return;
     
@@ -155,61 +167,45 @@ const WeaverDashboard = () => {
     if (!user) return;
     
     try {
+      if (productImages.length === 0) {
+        toast.error('Please add at least one product image');
+        return;
+      }
+      
       const tagsArray = values.tags ? values.tags.split(',').map(tag => tag.trim()) : [];
       
-      const { data, error } = await supabase
-        .from('products')
-        .insert({
-          name: values.name,
-          description: values.description,
-          price: values.price,
-          discount: values.discount || 0,
-          fabric_type: values.fabricType,
-          weaver_id: user.id,
-          in_stock: values.inStock,
-          images: productImages,
-          tags: tagsArray,
-          cod_available: values.codAvailable,
-          upi_enabled: values.upiEnabled,
-          card_enabled: values.cardEnabled
-        })
-        .select()
-        .single();
-      
-      if (error) throw error;
-      
-      if (data) {
-        const newProduct: Product = {
-          id: data.id,
-          name: data.name,
-          description: data.description || '',
-          images: data.images || [],
-          price: data.price,
-          discount: data.discount,
-          fabricType: data.fabric_type as FabricType,
-          weaverId: data.weaver_id,
-          inStock: data.in_stock,
-          rating: data.rating,
-          reviewCount: data.review_count,
-          tags: data.tags || [],
-          createdAt: new Date(data.created_at),
-          codAvailable: data.cod_available,
-          upiEnabled: data.upi_enabled,
-          cardEnabled: data.card_enabled
-        };
-        
-        setProducts(prev => [...prev, newProduct]);
-        
-        productForm.reset();
-        setProductImages([]);
-        
-        toast.success('Product added successfully');
-      }
+      // Use the insertProduct mutation from the useSupabaseInsert hook
+      insertProduct({
+        name: values.name,
+        description: values.description,
+        price: values.price,
+        discount: values.discount || 0,
+        fabric_type: values.fabricType,
+        weaver_id: user.id,
+        in_stock: values.inStock,
+        images: productImages,
+        tags: tagsArray,
+        cod_available: values.codAvailable,
+        upi_enabled: values.upiEnabled,
+        card_enabled: values.cardEnabled
+      });
     } catch (error: any) {
       console.error('Error adding product:', error);
       toast.error('Failed to add product', {
         description: error.message
       });
+    }
+  };
+  
+  const handleDeleteProduct = async (productId: string) => {
+    try {
+      setDeleteLoading(productId);
+      deleteProduct(productId);
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      toast.error('Failed to delete product');
+    } finally {
+      setDeleteLoading(null);
     }
   };
   
@@ -513,58 +509,79 @@ const WeaverDashboard = () => {
               </CardContent>
             </Card>
             
-            {products.map(product => (
-              <Card key={product.id}>
-                <div className="aspect-square relative">
-                  <img 
-                    src={product.images[0] || '/placeholder.svg'} 
-                    alt={product.name}
-                    className="w-full h-full object-cover"
-                  />
-                  {product.discount && product.discount > 0 && (
-                    <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
-                      {product.discount}% OFF
-                    </div>
-                  )}
-                </div>
-                <CardHeader>
-                  <CardTitle className="line-clamp-1">{product.name}</CardTitle>
-                  <CardDescription className="line-clamp-2">
-                    {product.description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-lg font-bold">₹{product.price}</p>
-                      {product.discount && product.discount > 0 && (
-                        <p className="text-sm text-muted-foreground line-through">
-                          ₹{(product.price / (1 - product.discount / 100)).toFixed(2)}
-                        </p>
-                      )}
-                    </div>
-                    <div className="text-sm">
-                      <span className={product.inStock ? "text-green-500" : "text-red-500"}>
-                        {product.inStock ? "In Stock" : "Out of Stock"}
-                      </span>
-                    </div>
+            {loading ? (
+              Array(2).fill(0).map((_, i) => (
+                <Card key={i} className="animate-pulse">
+                  <div className="aspect-square bg-secondary"></div>
+                  <CardHeader>
+                    <div className="h-6 bg-secondary rounded w-3/4"></div>
+                    <div className="h-4 bg-secondary rounded w-1/2 mt-2"></div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-4 bg-secondary rounded w-full mt-2"></div>
+                    <div className="h-4 bg-secondary rounded w-3/4 mt-2"></div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              products.map(product => (
+                <Card key={product.id}>
+                  <div className="aspect-square relative">
+                    <img 
+                      src={product.images[0] || '/placeholder.svg'} 
+                      alt={product.name}
+                      className="w-full h-full object-cover"
+                    />
+                    {product.discount && product.discount > 0 && (
+                      <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
+                        {product.discount}% OFF
+                      </div>
+                    )}
                   </div>
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {product.tags.slice(0, 3).map((tag, idx) => (
-                      <span key={idx} className="bg-secondary px-2 py-0.5 rounded-full text-xs">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </CardContent>
-                <CardFooter className="flex justify-between">
-                  <Button variant="outline" size="sm">Edit</Button>
-                  <Button variant="destructive" size="sm">Remove</Button>
-                </CardFooter>
-              </Card>
-            ))}
-            
-            {loading && <p>Loading products...</p>}
+                  <CardHeader>
+                    <CardTitle className="line-clamp-1">{product.name}</CardTitle>
+                    <CardDescription className="line-clamp-2">
+                      {product.description}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-lg font-bold">₹{product.price}</p>
+                        {product.discount && product.discount > 0 && (
+                          <p className="text-sm text-muted-foreground line-through">
+                            ₹{(product.price / (1 - product.discount / 100)).toFixed(2)}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-sm">
+                        <span className={product.inStock ? "text-green-500" : "text-red-500"}>
+                          {product.inStock ? "In Stock" : "Out of Stock"}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {product.tags.slice(0, 3).map((tag, idx) => (
+                        <span key={idx} className="bg-secondary px-2 py-0.5 rounded-full text-xs">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex justify-between">
+                    <Button variant="outline" size="sm">Edit</Button>
+                    <Button 
+                      variant="destructive" 
+                      size="sm" 
+                      onClick={() => handleDeleteProduct(product.id)}
+                      disabled={deleteLoading === product.id}
+                    >
+                      {deleteLoading === product.id ? 'Deleting...' : 'Remove'}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))
+            )}
             
             {!loading && products.length === 0 && (
               <Card className="col-span-3 py-10">
