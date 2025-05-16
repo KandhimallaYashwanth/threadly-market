@@ -1,4 +1,3 @@
-
 import React from 'react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
@@ -137,20 +136,16 @@ const About = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
               {[
                 {
-                  name: "Yashwanth",
-                  role: "Founder & CEO"
+                  name: "Yashwanth"
                 },
                 {
-                  name: "Devendhar",
-                  role: "Head of Artisan Relations"
+                  name: "Devendhar"
                 },
                 {
-                  name: "Varnika",
-                  role: "Creative Director"
+                  name: "Varnika"
                 },
                 {
-                  name: "Manasa",
-                  role: "Technology Lead"
+                  name: "Manasa"
                 }
               ].map((member, index) => (
                 <div key={index} className="text-center bg-white p-6 rounded-xl hover-lift transition-all-300">
@@ -158,7 +153,6 @@ const About = () => {
                     <User className="w-8 h-8 text-primary" />
                   </div>
                   <h3 className="text-lg font-medium">{member.name}</h3>
-                  <p className="text-sm text-muted-foreground">{member.role}</p>
                 </div>
               ))}
             </div>
