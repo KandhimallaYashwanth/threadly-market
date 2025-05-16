@@ -4,7 +4,7 @@ import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { ArrowRight, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, CheckCircle2, User } from 'lucide-react';
 
 const About = () => {
   return (
@@ -137,33 +137,25 @@ const About = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
               {[
                 {
-                  name: "Priya Sharma",
-                  role: "Founder & CEO",
-                  image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=1376&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                  name: "Yashwanth",
+                  role: "Founder & CEO"
                 },
                 {
-                  name: "Raj Verma",
-                  role: "Head of Artisan Relations",
-                  image: "https://images.unsplash.com/photo-1566492031773-4f4e44671857?q=80&w=1374&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                  name: "Devendhar",
+                  role: "Head of Artisan Relations"
                 },
                 {
-                  name: "Anita Desai",
-                  role: "Creative Director",
-                  image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=1361&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                  name: "Varnika",
+                  role: "Creative Director"
                 },
                 {
-                  name: "Vikram Reddy",
-                  role: "Technology Lead",
-                  image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=1374&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                  name: "Manasa",
+                  role: "Technology Lead"
                 }
               ].map((member, index) => (
-                <div key={index} className="text-center hover-lift transition-all-300">
-                  <div className="mb-4 relative mx-auto w-40 h-40 overflow-hidden rounded-full">
-                    <img 
-                      src={member.image} 
-                      alt={member.name} 
-                      className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
-                    />
+                <div key={index} className="text-center bg-white p-6 rounded-xl hover-lift transition-all-300">
+                  <div className="mb-4 bg-primary/5 p-4 rounded-full w-20 h-20 flex items-center justify-center mx-auto">
+                    <User className="w-8 h-8 text-primary" />
                   </div>
                   <h3 className="text-lg font-medium">{member.name}</h3>
                   <p className="text-sm text-muted-foreground">{member.role}</p>
