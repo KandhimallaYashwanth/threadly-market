@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Search, Filter, X, ChevronDown, ArrowUpDown, Check 
@@ -16,11 +16,9 @@ import {
   DropdownMenuRadioItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import { FabricType, Product, User } from '@/lib/types';
+import { productsWithWeavers } from '@/lib/data';
+import { FabricType } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
-import { useSupabaseQuery } from '@/hooks/useSupabaseQuery';
-import { toast } from 'sonner';
 
 const Products = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -31,88 +29,9 @@ const Products = () => {
     priceRange: { min: 0, max: 15000 },
     inStock: true,
   });
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  // Fetch all products from Supabase
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        
-        // Join with profiles to get weaver information
-        const { data, error } = await supabase
-          .from('products')
-          .select(`
-            *,
-            weaver:profiles(id, name, is_verified, avatar_url)
-          `);
-        
-        if (error) throw error;
-        
-        if (data) {
-          // Map the data to our Product type
-          const mappedProducts: Product[] = data.map((item: any) => ({
-            id: item.id,
-            name: item.name,
-            description: item.description || '',
-            images: item.images || [],
-            price: item.price,
-            discount: item.discount || 0,
-            fabricType: item.fabric_type as FabricType,
-            weaverId: item.weaver_id,
-            weaver: item.weaver ? {
-              id: item.weaver.id,
-              name: item.weaver.name || '',
-              email: '', // Not included for privacy
-              role: 'weaver' as any, // Explicitly set
-              isVerified: item.weaver.is_verified,
-              avatar_url: item.weaver.avatar_url,
-              createdAt: new Date()
-            } as User : undefined,
-            inStock: item.in_stock,
-            rating: item.rating,
-            reviewCount: item.review_count,
-            tags: item.tags || [],
-            createdAt: new Date(item.created_at),
-            codAvailable: item.cod_available,
-            upiEnabled: item.upi_enabled,
-            cardEnabled: item.card_enabled,
-          }));
-          
-          setProducts(mappedProducts);
-        }
-      } catch (error) {
-        console.error('Error fetching products:', error);
-        toast.error('Failed to load products');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchProducts();
-    
-    // Set up real-time subscription
-    const channel = supabase
-      .channel('public:products')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'products' 
-      }, (payload) => {
-        console.log('Products changed:', payload);
-        // Refresh the product list when changes occur
-        fetchProducts();
-      })
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
 
   // Filter products based on search term and filters
-  const filteredProducts = products.filter(product => {
+  const filteredProducts = productsWithWeavers.filter(product => {
     // Search term filter
     if (searchTerm && !product.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
         !product.description.toLowerCase().includes(searchTerm.toLowerCase()) &&
@@ -339,17 +258,11 @@ const Products = () => {
 
           {/* Results Count */}
           <div className="mb-6 text-muted-foreground">
-            Showing {sortedProducts.length} of {products.length} products
+            Showing {sortedProducts.length} of {productsWithWeavers.length} products
           </div>
 
           {/* Product Grid */}
-          {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {[...Array(8)].map((_, i) => (
-                <div key={i} className="bg-secondary/40 rounded-lg h-80 animate-pulse"></div>
-              ))}
-            </div>
-          ) : sortedProducts.length > 0 ? (
+          {sortedProducts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {sortedProducts.map((product) => (
                 <ProductCard 
