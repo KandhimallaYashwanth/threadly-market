@@ -60,18 +60,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.log("Auth state changed:", event, currentSession?.user?.id);
         setSession(currentSession);
         
-        if (currentSession?.user) {
-          // Use setTimeout to avoid potential issues with auth state changes
-          setTimeout(async () => {
+        setTimeout(async () => {
+          if (currentSession?.user) {
             const mappedUser = await mapSupabaseUser(currentSession.user);
             console.log("Mapped user:", mappedUser);
             setUser(mappedUser);
-            setLoading(false);
-          }, 0);
-        } else {
-          setUser(null);
+          } else {
+            setUser(null);
+          }
           setLoading(false);
-        }
+        }, 0);
       }
     );
 
@@ -118,8 +116,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       setLoading(true);
       
-      // First, sign up the user
-      const { error, data } = await supabase.auth.signUp({
+      // Signing up without email confirmation
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -128,6 +126,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             role,
             bio
           },
+          // Explicitly set to undefined to bypass email confirmation
           emailRedirectTo: undefined,
         },
       });
@@ -135,13 +134,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (error) throw error;
       
       // Immediately sign in the user after sign up
-      if (data.user) {
-        await supabase.auth.signInWithPassword({ email, password });
-        
-        toast.success("Registration successful", {
-          description: "Your account has been created. Welcome to Threadly!"
-        });
-      }
+      await supabase.auth.signInWithPassword({ email, password });
+      
+      toast.success("Registration successful", {
+        description: "Your account has been created. Welcome to Threadly!"
+      });
     } catch (error: any) {
       toast.error("Registration failed", {
         description: error.message || "Please check your information and try again."

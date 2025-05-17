@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { LogIn, BadgeCheck, User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
@@ -48,6 +47,7 @@ const Auth = () => {
   
   const [showPassword, setShowPassword] = useState(false);
   const [accountType, setAccountType] = useState<UserRole>(UserRole.CUSTOMER);
+  const [redirectTriggered, setRedirectTriggered] = useState(false);
   
   // Setup form hooks
   const loginForm = useForm<z.infer<typeof loginSchema>>({
@@ -81,34 +81,33 @@ const Auth = () => {
     }
   }, [redirectReason]);
 
-  // Enhanced redirection effect
+  // Enhanced redirection effect with improved logging and role handling
   useEffect(() => {
-    if (user) {
-      console.log("Auth page detected authenticated user:", user);
+    if (user && !redirectTriggered) {
+      console.log("Detected authenticated user:", user);
+      setRedirectTriggered(true);
       
       // Clear any form validation errors
       loginForm.reset();
       registerForm.reset();
       
-      // Short delay to allow any state changes to complete and toasts to be seen
+      // Navigate based on user role with a slight delay to allow toast to be seen
       setTimeout(() => {
         console.log("Redirecting user based on role:", user.role);
         
         if (user.role === UserRole.WEAVER) {
           navigate('/dashboard/weaver', { replace: true });
         } else if (user.role === UserRole.CUSTOMER) {
-          navigate('/', { replace: true });
+          navigate('/dashboard/customer', { replace: true });
         } else if (user.role === UserRole.ADMIN) {
           navigate('/dashboard/admin', { replace: true });
         } else {
           // Default fallback
           navigate(from === '/auth' ? '/' : from, { replace: true });
         }
-        
-        toast.success(`Welcome, ${user.name || 'User'}!`);
-      }, 500);
+      }, 800); // Short delay to see the toast
     }
-  }, [user, navigate, from, loginForm, registerForm]);
+  }, [user, navigate, from, redirectTriggered, loginForm, registerForm]);
   
   // Update role in form when account type changes
   useEffect(() => {
