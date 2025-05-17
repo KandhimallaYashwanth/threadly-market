@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -7,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, ShoppingBag, MessageSquare, Store, Users, Package, X } from "lucide-react";
+import { PlusCircle, ShoppingBag, MessageSquare, Store, Users, Package, X, LogOut } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { UserRole, FabricType, Product, Order, OrderStatus, PaymentMethod } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -36,7 +35,7 @@ const productSchema = z.object({
 });
 
 const WeaverDashboard = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState("profile");
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -238,6 +237,10 @@ const WeaverDashboard = () => {
             <p className="text-muted-foreground">Weaver Dashboard</p>
           </div>
         </div>
+        <Button onClick={signOut} variant="outline" className="flex items-center gap-2">
+          <LogOut className="h-4 w-4" />
+          Logout
+        </Button>
       </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab}>
