@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
-  Menu, X, Search, ShoppingCart, User, Bell, LogIn, LogOut 
+  Menu, X, Search, ShoppingCart, User, Bell, LogIn, LogOut, LayoutDashboard 
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import ThreadlyLogo from '@/components/ui/ThreadlyLogo';
+import { useAuth } from '@/context/AuthContext';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -28,7 +30,7 @@ const Navbar = () => {
   const isMobile = useIsMobile();
   const { toast: shadowToast } = useToast();
   const [cartCount, setCartCount] = useState(0);
-  const [user, setUser] = useState<any>(null);
+  const { user, signOut } = useAuth();
 
   const isHomePage = location.pathname === '/';
 
@@ -41,15 +43,6 @@ const Navbar = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    } else {
-      setUser(null);
-    }
-  }, [location.pathname]);
 
   useEffect(() => {
     const getCartItems = () => {
@@ -107,11 +100,13 @@ const Navbar = () => {
     }
   };
   
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    setUser(null);
-    toast.success("Logged out successfully");
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigate('/');
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   return (
@@ -148,6 +143,22 @@ const Navbar = () => {
                 {link.name}
               </Link>
             ))}
+
+            {/* Dashboard link for authenticated users */}
+            {user && (
+              <Link
+                to={user.role === UserRole.WEAVER ? "/dashboard/weaver" : "/dashboard/customer"}
+                className={cn(
+                  'px-3 py-2 text-sm font-medium transition-colors relative',
+                  'hover:text-primary/90',
+                  location.pathname.startsWith('/dashboard')
+                    ? 'text-primary after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-full after:bg-primary'
+                    : 'text-foreground'
+                )}
+              >
+                Dashboard
+              </Link>
+            )}
           </div>
 
           <div className="hidden md:block relative flex-1 max-w-md mx-6">
@@ -181,7 +192,7 @@ const Navbar = () => {
                   <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 overflow-hidden">
                     <Avatar className="h-8 w-8">
                       <AvatarImage 
-                        src={user.avatar || `https://ui-avatars.com/api/?name=${user.name}`} 
+                        src={user.avatar_url || `https://ui-avatars.com/api/?name=${user.name}`} 
                         alt={user.name} 
                       />
                       <AvatarFallback>{user.name?.charAt(0) || 'U'}</AvatarFallback>
@@ -192,7 +203,7 @@ const Navbar = () => {
                   <div className="flex items-center gap-2 p-2">
                     <Avatar className="h-8 w-8">
                       <AvatarImage 
-                        src={user.avatar || `https://ui-avatars.com/api/?name=${user.name}`} 
+                        src={user.avatar_url || `https://ui-avatars.com/api/?name=${user.name}`} 
                         alt={user.name} 
                       />
                       <AvatarFallback>{user.name?.charAt(0) || 'U'}</AvatarFallback>
@@ -204,7 +215,7 @@ const Navbar = () => {
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleDashboardClick}>
-                    <User className="mr-2 h-4 w-4" />
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
                     Dashboard
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleLogout}>
@@ -248,6 +259,22 @@ const Navbar = () => {
                   {link.name}
                 </Link>
               ))}
+              
+              {/* Dashboard link for authenticated users in mobile menu */}
+              {user && (
+                <Link
+                  to={user.role === UserRole.WEAVER ? "/dashboard/weaver" : "/dashboard/customer"}
+                  className={cn(
+                    'block px-3 py-2 text-base font-medium transition-colors',
+                    location.pathname.startsWith('/dashboard')
+                      ? 'text-primary'
+                      : 'text-foreground hover:text-primary/90'
+                  )}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Dashboard
+                </Link>
+              )}
             </div>
             <div className="py-4 border-t border-border">
               <form onSubmit={handleSearch} className="relative mb-4">
@@ -281,7 +308,7 @@ const Navbar = () => {
                       handleDashboardClick();
                     }}
                   >
-                    <User className="w-4 h-4 mr-2" />
+                    <LayoutDashboard className="w-4 h-4 mr-2" />
                     Dashboard
                   </Button>
                 ) : (
