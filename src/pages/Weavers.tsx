@@ -19,155 +19,63 @@ interface WeaverWithStats extends User {
 const Weavers = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [weavers, setWeavers] = useState<WeaverWithStats[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   
-  // Fetch weavers from Supabase using a direct query instead of useSupabaseQuery
+  // Use predefined weavers instead of fetching from Supabase
   useEffect(() => {
-    const fetchWeavers = async () => {
-      try {
-        setIsLoading(true);
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('role', UserRole.WEAVER);
-          
-        if (error) throw error;
-        
-        if (data) {
-          // Convert data to User objects
-          const mappedWeavers = data.map(mapSupabaseProfileToUser);
-          
-          // Enrich weavers with product stats
-          const weaversWithStats = await fetchWeaverStats(mappedWeavers);
-          setWeavers(weaversWithStats);
-        }
-      } catch (error) {
-        console.error('Error fetching weavers:', error);
-      } finally {
-        setIsLoading(false);
+    const hardcodedWeavers: WeaverWithStats[] = [
+      {
+        id: 'w1',
+        name: 'Aruna Patel',
+        email: 'aruna@example.com',
+        role: UserRole.WEAVER,
+        avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=1364&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+        bio: 'Third-generation silk weaver specializing in traditional Banarasi designs with 15 years of experience.',
+        isVerified: true,
+        createdAt: new Date('2022-01-10'),
+        productCount: 2,
+        averageRating: 4.7
+      },
+      {
+        id: 'w2',
+        name: 'Rajesh Kumar',
+        email: 'rajesh@example.com',
+        role: UserRole.WEAVER,
+        avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1374&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+        bio: 'Specializing in cotton handloom with natural dyes, creating sustainable and eco-friendly fabrics.',
+        isVerified: true,
+        createdAt: new Date('2022-03-15'),
+        productCount: 2,
+        averageRating: 4.5
+      },
+      {
+        id: 'w3',
+        name: 'Lakshmi Devi',
+        email: 'lakshmi@example.com',
+        role: UserRole.WEAVER,
+        avatar_url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=1361&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+        bio: 'Award-winning master weaver known for intricate jute and linen blends with contemporary designs.',
+        isVerified: true,
+        createdAt: new Date('2022-05-20'),
+        productCount: 2,
+        averageRating: 4.8
+      },
+      {
+        id: 'w4',
+        name: 'Vikram Singh',
+        email: 'vikram@example.com',
+        role: UserRole.WEAVER,
+        avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=1374&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+        bio: 'Specializing in woolen shawls and blankets using traditional hill station techniques passed down generations.',
+        isVerified: false,
+        createdAt: new Date('2022-08-05'),
+        productCount: 2,
+        averageRating: 4.7
       }
-    };
-    
-    fetchWeavers();
+    ];
+
+    setWeavers(hardcodedWeavers);
   }, []);
-  
-  // Setup realtime subscription for weaver profiles
-  useEffect(() => {
-    const channel = supabase
-      .channel('public:profiles')
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'profiles',
-        filter: `role=eq.${UserRole.WEAVER}`
-      }, (payload) => {
-        // If it's a new weaver, add them to the list
-        if (payload.new) {
-          const newWeaver = mapSupabaseProfileToUser(payload.new as any);
-          
-          // Fetch stats for the new weaver
-          fetchWeaverStats([newWeaver]).then(enrichedWeavers => {
-            setWeavers(prev => [...prev, enrichedWeavers[0]]);
-          });
-        }
-      })
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'profiles',
-        filter: `role=eq.${UserRole.WEAVER}`
-      }, (payload) => {
-        // If a weaver is updated, update them in the list
-        if (payload.new) {
-          const updatedWeaver = mapSupabaseProfileToUser(payload.new as any);
-          
-          setWeavers(prev => 
-            prev.map(w => {
-              if (w.id === updatedWeaver.id) {
-                // Preserve stats when updating
-                return { 
-                  ...updatedWeaver, 
-                  productCount: w.productCount, 
-                  averageRating: w.averageRating 
-                };
-              }
-              return w;
-            })
-          );
-        }
-      })
-      .subscribe();
-      
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-  
-  // Helper function to map Supabase profile to User type
-  const mapSupabaseProfileToUser = (profile: any): User => {
-    return {
-      id: profile.id,
-      name: profile.name || '',
-      email: profile.email || '',
-      role: profile.role as UserRole,
-      avatar_url: profile.avatar_url,
-      bio: profile.bio,
-      isVerified: profile.is_verified,
-      createdAt: new Date(profile.created_at)
-    };
-  };
-  
-  // Fetch products for each weaver to get product counts and average ratings
-  const fetchWeaverStats = async (weavers: User[]): Promise<WeaverWithStats[]> => {
-    if (!weavers || weavers.length === 0) return [];
-    
-    // Create a map of weaver IDs to their stats
-    const weaverStats = new Map<string, { productCount: number, totalRating: number, ratingCount: number }>();
-    
-    // Initialize stats for each weaver
-    weavers.forEach(weaver => {
-      weaverStats.set(weaver.id, { productCount: 0, totalRating: 0, ratingCount: 0 });
-    });
-    
-    try {
-      // Fetch all products
-      const { data: products, error } = await supabase
-        .from('products')
-        .select('weaver_id, rating');
-      
-      if (error) throw error;
-      
-      if (products) {
-        // Calculate stats for each weaver
-        products.forEach((product: any) => {
-          const stats = weaverStats.get(product.weaver_id);
-          if (stats) {
-            stats.productCount += 1;
-            if (product.rating) {
-              stats.totalRating += product.rating;
-              stats.ratingCount += 1;
-            }
-          }
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching products:', error);
-    }
-    
-    // Add stats to weavers
-    return weavers.map(weaver => {
-      const stats = weaverStats.get(weaver.id);
-      const averageRating = stats && stats.ratingCount > 0 
-        ? stats.totalRating / stats.ratingCount 
-        : 0;
-      
-      return {
-        ...weaver,
-        productCount: stats?.productCount || 0,
-        averageRating
-      };
-    });
-  };
 
   // Filter weavers based on search query
   const filteredWeavers = weavers.filter(weaver => 

@@ -4,26 +4,60 @@ import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import WeaverCard from '@/components/ui/WeaverCard';
-import { weavers, products } from '@/lib/data';
+import { UserRole } from '@/lib/types';
 
 const FeaturedWeavers = () => {
-  // Get product counts for each weaver
-  const weaverProductCounts = weavers.map(weaver => {
-    const count = products.filter(p => p.weaverId === weaver.id).length;
-    const ratings = products
-      .filter(p => p.weaverId === weaver.id && p.rating)
-      .map(p => p.rating || 0);
-    
-    const avgRating = ratings.length 
-      ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length 
-      : 0;
-    
-    return {
-      ...weaver,
-      productCount: count,
-      averageRating: avgRating
-    };
-  });
+  // Create the same weavers data from the Weavers page
+  const weavers = [
+    {
+      id: 'w1',
+      name: 'Aruna Patel',
+      email: 'aruna@example.com',
+      role: UserRole.WEAVER,
+      avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=1364&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+      bio: 'Third-generation silk weaver specializing in traditional Banarasi designs with 15 years of experience.',
+      isVerified: true,
+      createdAt: new Date('2022-01-10'),
+      productCount: 2,
+      averageRating: 4.7
+    },
+    {
+      id: 'w2',
+      name: 'Rajesh Kumar',
+      email: 'rajesh@example.com',
+      role: UserRole.WEAVER,
+      avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1374&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+      bio: 'Specializing in cotton handloom with natural dyes, creating sustainable and eco-friendly fabrics.',
+      isVerified: true,
+      createdAt: new Date('2022-03-15'),
+      productCount: 2,
+      averageRating: 4.5
+    },
+    {
+      id: 'w3',
+      name: 'Lakshmi Devi',
+      email: 'lakshmi@example.com',
+      role: UserRole.WEAVER,
+      avatar_url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=1361&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+      bio: 'Award-winning master weaver known for intricate jute and linen blends with contemporary designs.',
+      isVerified: true,
+      createdAt: new Date('2022-05-20'),
+      productCount: 2,
+      averageRating: 4.8
+    },
+    {
+      id: 'w4',
+      name: 'Vikram Singh',
+      email: 'vikram@example.com',
+      role: UserRole.WEAVER,
+      avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=1374&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+      bio: 'Specializing in woolen shawls and blankets using traditional hill station techniques passed down generations.',
+      isVerified: false,
+      createdAt: new Date('2022-08-05'),
+      productCount: 2,
+      averageRating: 4.7
+    }
+  ];
 
   return (
     <section className="py-20 bg-secondary/50">
@@ -48,7 +82,7 @@ const FeaturedWeavers = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {weaverProductCounts.slice(0, 4).map((weaver, index) => (
+          {weavers.slice(0, 4).map((weaver, index) => (
             <WeaverCard 
               key={weaver.id} 
               weaver={weaver} 
